@@ -4,10 +4,15 @@ Module for Fourier-space methods.
 
 import numpy as np 
 import matplotlib.pyplot as plt
+
+import skimage
 from skimage import io
 from skimage.filters import gaussian
 
 from pyCTF.misc import find_iradius_itheta
+from pyCTF.misc import normalise_data_range
+
+from pyCTF.ctf_profile import Profile
 
 class Fourier:
     '''
@@ -141,7 +146,7 @@ class Fourier:
         '''
         output = np.array( stack, complex )
         for n in range( 0, np.size(stack, 2) ):
-            output[:, :, n] = Fourier.imFFT( stack[:, :, n] )
+            output[:, :, n] = Fourier.imfft( stack[:, :, n] )
         return output
 
     def fft3d( stack ):
@@ -329,10 +334,10 @@ class Fourier:
         centX = len(stack[0])/2
         centY = len(stack[1])/2
         # get length of radial profile
-        out, _ = profile.radial_profile( stack[0], centX, centY )
+        out, _ = Profile.radial_profile( stack[0], centX, centY )
         output = np.zeros( [ np.size(out), np.size(stack, 2)] )
         for n in range( np.size(stack, 2) ):
-            output[:, n], _ = profile.radial_profile( stack[:, :, n], 
+            output[:, n], _ = Profile.radial_profile( stack[:, :, n], 
                                                     centX, 
                                                     centY )
         return output
@@ -392,12 +397,12 @@ class Fourier:
         width = kwargs.get( 'width', None )
         r1 = kwargs.get( 'r1', 10 )
         r2 = kwargs.get( 'r2', 10 )
-        FFT = Fourier.FFTstack( stack )
+        FFT = Fourier.fft_stack( stack )
         FFT = Fourier.log_mod( FFT )
         if ( width != None ):
             FFT = Fourier.crop( FFT, width )
         FFT = Fourier.remove_bckg_stack( FFT, r1, r2 )
-        prof = Fourier.profile_FFTstack( FFT )
+        prof = Fourier.profile_fft_stack( FFT )
         return FFT, prof
 
     # import TIFF stack as a stack
@@ -459,7 +464,7 @@ class Fourier:
         width = kwargs.get( 'width', 300 )
         rs1 = kwargs.get( 'rs1', 20 )
         rs2 = kwargs.get( 'rs2', 20 )
-        FT = Fourier.imFFT( image )
+        FT = Fourier.imfft( image )
         FT = Fourier.log_mod( FT )
         FT = Fourier.crop( FT, width )
         FT, _, _ = Fourier.remove_bckg( FT, rs1, rs2 )
@@ -520,8 +525,8 @@ class Fourier:
         axs[0].plot( output[:, 0], output[:, 2], 'x', color='red' )
         axs[0].plot( output[:, 1], output[:, 2], 'x', color='orange' )
         
-        output[:, 0] = normaliseDataRange( output[:, 0] )
-        output[:, 1] = normaliseDataRange( output[:, 1] )
+        output[:, 0] = normalise_data_range( output[:, 0] )
+        output[:, 1] = normalise_data_range( output[:, 1] )
     
         axs[1].hlines(1, 0, 100, color='k', linestyle='--', alpha=0.7 )
         axs[1].hlines(0, 0, 100, color='k', linestyle='--', alpha=0.7 )

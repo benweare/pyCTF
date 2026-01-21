@@ -64,7 +64,7 @@ def normalise_data_range( data, **kwargs ):
     dmax = kwargs.get('dmax', 1)
     return ((data-np.min(data))/(np.max(data)-np.min(data)))*( dmax - dmin )
 
-def baseline_als( y, lam, p, niter ):
+def baseline_als( y, lam, p, **kwargs ):
     """
     Baseline correction for 1D datasets.
 
@@ -89,11 +89,11 @@ def baseline_als( y, lam, p, niter ):
     method of Eilersand Boelens (2005), via Baek et al. (2014).
 
     """
-    n_iterations = 10
+    n_iter = kwargs.get('n_iter', 10)
     L = len( y )
     D = sparse.diags([1,-2,1],[0,-1,-2], shape=(L,L-2))
     w = np.ones( L )
-    for i in range( n_iterations ):
+    for i in range( n_iter ):
         W = sparse.spdiags(w, 0, L, L)
         Z = W + lam * D.dot(D.transpose())
         z = spsolve(Z, w*y)

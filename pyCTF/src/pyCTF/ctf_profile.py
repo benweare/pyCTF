@@ -109,7 +109,7 @@ class Profile:
             f_limits[1] = data[-1]
         range_low = np.argwhere( freq <= f_limits[0] )
         range_high = np.argwhere( freq >= f_limits[1] )
-        cropped_freq = freq[range_low[-1, 0]:range_high[1, 0]]
+        cropped_freq = freq[range_low[-1,0]:range_high[1,0]] #freq[range_low[-1, 0]:range_high[1, 0]]
         cropped_prof = np.zeros( np.size( cropped_freq ) )
         cropped_prof = data[range_low[-1, 0]:range_high[1, 0]]
         return cropped_freq, cropped_prof

@@ -253,7 +253,7 @@ class Zeros:
         experimental CTF.
         '''
         from lmfit import Model as mdl
-        model = mdl( misc.gradient_simple )
+        model = mdl( gradient_simple )
         params = model.make_params( )
         params['m'].value = -1.0
         params['m'].vary = True

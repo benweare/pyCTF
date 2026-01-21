@@ -12,9 +12,10 @@ from skimage.filters import gaussian
 
 from pyCTF.misc import LineProfiles
 from pyCTF.misc import ZerosData
-
 from pyCTF.misc import make_scalebar
 from pyCTF.misc import composite_image
+
+from pyCTF.ctf_profile import Profile
 
 
 # class for measuring astigmatism in CTF_image.image
@@ -199,7 +200,7 @@ class twofoldAstigmatism( LineProfiles ):
                 simCTF.C12a = a*1e-9
                 simCTF.C12b = b[n]*1e-9
                 simCTF.update()
-                polar[n] = warp_polar( simCTF.squareCTF[:, :], radius=radius ) # full
+                polar[n] = warp_polar( simCTF.square_CTF[:, :], radius=radius ) # full
         return polar
     
 
@@ -363,7 +364,7 @@ class twofoldAstigmatism( LineProfiles ):
             axs[0].set_yticklabels([])
         axs[0].set_xlabel('C12b')
         axs[0].set_ylabel('C12a')
-        composite = composite_image( CTF.image, CTF2D.squareCTF, int(np.round(CTF.length/2)) )
+        composite = composite_image( CTF.image, CTF2D.square_CTF, int(np.round(CTF.length/2)) )
         axs[1].matshow( composite )
         axs[1].set_xticks([])
         axs[1].set_yticks([])

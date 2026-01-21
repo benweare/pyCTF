@@ -179,7 +179,7 @@ class CTFImage:
         slices = kwargs.get( 'slices', 11 )
         CTF = self
         
-        CTF2D = CTFsimulation2D( CTF.max_freq_inscribed*2, int(CTF.length), CTF.kV, -500)
+        CTF2D = CTFSimulation2D( CTF.max_freq_inscribed*2, int(CTF.length), CTF.kV, -500)
         CTF2D.scale = CTF.scale
         CTF2D.defocus = defocus_guess * 1e-9
         CTF2D.phi = np.deg2rad( phi )
@@ -258,8 +258,8 @@ class CTFImage:
 
         Notes
         -----
-        Creates a plot showing the processed CTF, the low frequency background, 
-        and the envelope background.
+        Creates a plot showing the processed CTF, the low frequency
+        background, and the envelope background.
         '''
         fig, axs = plt.subplots(1, 3)
         axs[0].matshow( CTF.image )
@@ -311,9 +311,10 @@ class CTFImage:
 
         Notes
         -----
-        Wrapper around radial profile functions from ctf_profile class, that acts on CTF_image
-        class arguments. For details see following methods in ctf_profile class: 
-        radial_profile(), crop_frequency(), remove_baseline(), smooth_profile().
+        Wrapper around radial profile functions from ctf_profile class, that
+        acts on CTF_image class arguments. For details see following methods
+        in ctf_profile class: radial_profile(), crop_frequency(),
+        remove_baseline(), smooth_profile().
 
         Also used by twofoldAstigmatism class, via kwargs. 
         '''
@@ -332,7 +333,7 @@ class CTFImage:
         rprof, _ = Profile.radial_profile( image, self.centX, self.centY )
         freq, _ = Profile.radial_profile( self.iradius, self.centX, self.centY )
         try:
-            cfreq, cprof = profile.crop_frequency( rprof, freq, f_limits )
+            cfreq, cprof = Profile.crop_frequency( rprof, freq, f_limits )
         except:
             cfreq = freq
             cprof = rprof
@@ -340,7 +341,26 @@ class CTFImage:
         baseline = Profile.remove_baseline( cprof )
         sprof = Profile.smooth_profile( ( cprof - baseline ), polynomial, window )
         return rprof, freq, baseline, sprof, cprof, cfreq
+
+
+    def process_CTF_profile( self, **kwargs ):
+        '''
+        Wrapped around process profile that is more convient to use.
+        '''
+        f_limits = kwargs.get( 'f_limits', [0, 5.0] )
+        polynomial = kwargs.get( 'polynomial', 20 )
+        window = kwargs.get( 'window', 1 )
+        self.radial_profile,\
+        self.frequency,\
+        self.baseline,\
+        self.smoothed_profile,\
+        self.cropped_profile,\
+        self.cropped_frequency = self.process_profile(f_limits=f_limits,
+                                                    polynomial=polynomial,
+                                                    window=window)
+        return
         
+
     # clean up, some kwargs aren't used
     def find_zeros( self, **kwargs):
         '''
@@ -419,12 +439,13 @@ class CTFImage:
             message = 'Error: all minima filtered. Try checking radial profile?'
             raise filterError( message )
             return
-        indicies_min, x_min, y_min = Zeros.calc_indicies( minima, sprof, cfreq, start=start, underfocus=underfocus)
+        indicies_min, x_min, y_min = Zeros.calc_indicies( minima, sprof,\
+            cfreq, start=start, underfocus=underfocus)
         results, Cs, defocus = Zeros.fit( x_min, y_min, self.lamb )
         return indicies_min, y_min, x_min, results, Cs, defocus, minima, maxima
 
     def print_Cs_results( self ):  
-        Zeros.plotCsFigure( self.cropped_frequency, 
+        Zeros.plot_figure( self.cropped_frequency, 
                             self.smoothed_profile, 
                             self.minima, 
                             self.x_min, 
@@ -433,7 +454,7 @@ class CTFImage:
                             self.cropped_frequency,
                             (self.cropped_profile-self.baseline) )
         
-        Zeros.printResults( self.defocus, 
+        Zeros.print_results( self.defocus, 
                                 self.Cs, 
                                 self.results )
         return
@@ -505,7 +526,7 @@ class CTFImage:
         Wrapper to streamline measuring astigmatism to a single call.
         '''
         # check for profiles
-        self.radial_profile, _ = profile.radial_profile( self.image, self.centX, self.centY )
+        self.radial_profile, _ = Profile.radial_profile( self.image, self.centX, self.centY )
         self.frequency, _ = Profile.radial_profile( self.iradius, self.centX, self.centY )
         self.astig.measure_angle()
         return

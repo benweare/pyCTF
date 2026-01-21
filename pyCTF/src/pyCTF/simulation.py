@@ -307,7 +307,8 @@ class CTFSimulation2D:
         axs[1, 2].matshow( self.spatial )
 
         a = [axs[0,0],axs[0,1],axs[0,2],axs[1,0],axs[1,1],axs[1,2]]
-        titles = ['CTF', 'damped CTF', 'square CTF', 'aperture function','temporal coherence','spatial coherence']
+        titles = ['CTF', 'Damped CTF', 'Dquare CTF', 'Aperture function',\
+        'Temporal coherence','Spatial coherence']
 
         n = 0
         for ax in a:
@@ -526,7 +527,7 @@ class CTFSimulation1D:
         fig.figaspect=[1,2]
         ax.plot(self.frequency, self.square_CTF, label='CTF$^2$', color='darkviolet')
         # plot aperture function
-        ax.plot(self.frequency, self.aperture, label='aperture', color='orange')
+        ax.plot(self.frequency, self.aperture, label='Aperture', color='orange')
         # plot temporal envelope
         ax.plot(self.frequency, self.temporal, label='Temporal envelope', color='forestgreen')
         # plot spatial envelope
@@ -562,7 +563,8 @@ class CTFSimulation1D:
         axs[1, 1].plot( self.frequency, self.temporal )
         axs[1, 2].plot( self.frequency, self.spatial )
         a = [axs[0,0],axs[0,1],axs[0,2],axs[1,0],axs[1,1],axs[1,2]]
-        titles = ['CTF', 'damped CTF', 'square CTF', 'aperture function','temporal coherence','spatial coherence']
+        titles = ['CTF', 'Damped CTF', 'Square CTF', 'Aperture function',\
+        'Temporal coherence','Spatial coherence']
         n = 0
         for ax in a:
             #ax.set_xticks([])
