@@ -364,7 +364,8 @@ class twofoldAstigmatism( LineProfiles ):
             axs[0].set_yticklabels([])
         axs[0].set_xlabel('C12b')
         axs[0].set_ylabel('C12a')
-        composite = composite_image( CTF.image, CTF2D.square_CTF, int(np.round(CTF.length/2)) )
+        composite = composite_image( CTF.image, CTF2D.square_CTF,
+            int(np.round(CTF.length/2)) )
         axs[1].matshow( composite )
         axs[1].set_xticks([])
         axs[1].set_yticks([])
@@ -392,15 +393,18 @@ class twofoldAstigmatism( LineProfiles ):
         -----
         Acts on twofoldAstigmatism class, uses Matplotlib.
         '''
-        fig, axs = plt.subplots(1, 2, figsize=(10, 10))
+        fig, axs = plt.subplots(1, 2, figsize=(8, 8))
         axs[0].matshow( self.polar )
-        axs[0].hlines(self.amax, 0, len(self.polar), color='red', label='minimum defocus')
-        axs[0].hlines(self.amin, 0, len(self.polar), color='orange', label='maximum defocus')
+        axs[0].hlines(self.amax, 0, len(self.polar), color='orange',
+            label='Minimum defocus')
+        axs[0].hlines(self.amin, 0, len(self.polar), color='red',
+            label='Maximum defocus')
         axs[0].set_xlim([0, len(self.polar[0])])
         #axs[0].set_ylim([0, len(self.polar[1])])
         axs[1].matshow( self.correlation )
-        axs[1].plot( self.maximum[1], self.maximum[0], 'x', color='red' )
-        titles = ['polar image', 'autocorrelation']
+        axs[1].plot( self.maximum[1], self.maximum[0], 'x', color='red',
+            label='Maximum' )
+        titles = ['Polar image', 'Autocorrelation']
         a = [ axs[0], axs[1] ]
         n = 0
         for ax in a:
@@ -409,6 +413,15 @@ class twofoldAstigmatism( LineProfiles ):
             ax.set_xticks([])
             n = n+1
         #fig.legend( loc='' )
+        try:
+            scalebar = make_scalebar( 0.5, self.scale, axs[0] )
+            axs[0].add_artist(scalebar)
+        except:
+            print('Error: could not add scalebar to image.')
+        axs[0].set_ylabel('Angle / degrees', fontsize = 12)
+        axs[0].set_xlabel('Frequency / $nm^{-1}$', fontsize = 12)
+        axs[0].legend(loc='lower right')
+        axs[1].legend(loc='lower right')
         return
 
 

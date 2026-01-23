@@ -153,6 +153,36 @@ def composite_image( image1, image2, size ):
     composite[size:, size:] = image2[size:, size:]
     return composite
 
+def show_image( image, **kwargs ):
+        '''
+        Display an image of the CTF.
+
+        Parameters
+        ----------
+        scalebar : bool, optional
+            Add a scalebar to image if True.
+        length : float, optional
+            Length of scalebar in nm-1.
+
+        Notes
+        -----
+        Uses plt.matshow to display the image.
+        '''
+        import matplotlib.pyplot as plt
+        scale = kwargs.get( 'scale', 0 )
+        val = kwargs.get( 'length', 0.5 )
+        fig, ax = plt.subplots()
+        ax.matshow( image )
+        ax.set_xticks([])
+        ax.set_yticks([])
+        if ( scale != 0 ):
+            try:
+                scalebar = make_scalebar( length, scale, ax )
+                ax.add_artist(scalebar)
+            except:
+                print('Error: could not add scalebar to image.')
+        return
+
 def make_scalebar( val, scale, ax ):
     '''
     Make a scalebar.
@@ -222,9 +252,9 @@ def find_iradius_itheta( image, scale ):
     irow, icol = np.indices( image.shape )
     centX = irow - image.shape[0] / 2.0
     centY = icol - image.shape[1] / 2.0
-    #distance from centre
+    # Distance from centre.
     iradius = ((centX**2 + centY**2)**0.5) * scale
-    #angle from centre
+    # Angle from centre.
     itheta = np.arctan2(centX, centY)
     return iradius, itheta
 

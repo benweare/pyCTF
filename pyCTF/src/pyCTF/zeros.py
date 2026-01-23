@@ -267,7 +267,7 @@ class Zeros:
         return results, Cs, defocus
     
     # clean up xraw and yraw
-    def plot_figure( x, y, minima, x_min, y_min, results, xraw, yraw ):
+    def plot_figure( x, y, minima, x_min, y_min, results, xraw, yraw, indi_min ):
         '''
         Plot figure for spherical aberration fiting.
 
@@ -286,11 +286,13 @@ class Zeros:
         axs[0].plot( xraw, yraw, alpha=0.4, label='baseline corrected' )
         axs[0].plot( x, y, label='smoothed' )
         axs[0].plot( x[ minima ], y[ minima ], "x" )
-        axs[0].set_ylim([None, 1.0])
+        #axs[0].set_ylim([None, 1.0])
+        for i, txt in enumerate(indi_min):
+            axs[0].annotate(txt, (x[minima[i]], y[minima[i]]))
 
         axs[1].plot( x_min, y_min, 'x', label='minima' )
         axs[1].plot( x_min, results.best_fit, label='best fit' )
-        
+
         axs[0].set_box_aspect(1)
         #axs[0].set_title("Fit")
         axs[0].set_ylabel('Intensity', fontsize = 16)
@@ -304,21 +306,50 @@ class Zeros:
         axs[1].legend()
         return
 
-    def print_results( defocus, Cs, results ):
+    def print_results(CTF, poly, win, xlim, ylim, defocus, Cs, results):
         '''
-        Print spherical aberration and defocus.
+        Print results of fitting to console.
+        '''
+        print('-------------')
+        print('lmfit results')
+        print('-------------')
+        print( results.fit_report(show_correl=False)+'\n' )
+        print( Zeros.__results_table(CTF, poly, win, xlim, ylim, defocus, Cs, results) )
+        return
 
-        Parameters
-        ----------
-        defocus : float
-        Cs : float
-        results : class
-        '''
+    # Make a table of results from fitting parameters.
+    def __results_table( CTF, poly, win, xlim, ylim, defocus, Cs, results ):
         if ( Cs == None ):
             Cs = 'N/A'
         if ( defocus == None ):
             defocus = 'N/A'
-        print( results.fit_report(show_correl=False) )
-        print( 'defocus / nm = ' + str( defocus ) )
-        print( 'Cs / mm = ' + str( Cs ) )
-        return
+        string = \
+        '\n---------------'+\
+        '\nFitting results'+\
+        '\n---------------'+\
+        '\nDefocus (nm): ' + str(defocus) +\
+        '\nSpherical aberration (mm): ' + str(Cs) +\
+        '\n----------------------'+\
+        '\nRadial profile'+\
+        '\n----------------------'+\
+        '\nMaximum frequency (nm-1): ' + str(CTF.max_freq_inscribed) +\
+        '\nFitted range x (nm-1): ' + str(xlim[0]) + ' - ' + str(xlim[1]) +\
+        '\nFitted range y:'+ str(ylim[0]) + ' - ' + str(ylim[1]) +\
+        '\n------------------------'+\
+        '\nSavitksy-Golay smoothing' +\
+        '\n------------------------'+\
+        '\nPolynomial=' + str(poly) +\
+        '\nWindow=' + str(win) +\
+        '\n---------------'+\
+        '\nDetected minima' +\
+        '\n---------------'+\
+        '\n|------------------|-------|'+\
+        '\n| Frequency (nm-1) | Index |'+\
+        '\n|------------------|-------|' 
+        for n, m in zip(CTF.minima, CTF.indicies_min):
+            space1 = ' '*(9-len(str(n)))
+            space2 = ' '*(4-len(str(m)))
+            string+='\n|'+space1+str(n)+'         |'+space2+str(m)+'   |'
+        string+='\n|------------------|-------|' 
+        return string
+    

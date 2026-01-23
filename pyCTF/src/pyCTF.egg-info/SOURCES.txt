@@ -2,12 +2,10 @@ README.md
 pyproject.toml
 src/pyCTF/CTF_image.py
 src/pyCTF/__init__.py
-src/pyCTF/abstract.py
 src/pyCTF/chromatic_aberration.py
+src/pyCTF/ctf_profile.py
 src/pyCTF/fourier.py
-src/pyCTF/main.py
 src/pyCTF/misc.py
-src/pyCTF/profile.py
 src/pyCTF/simulation.py
 src/pyCTF/twofold_astigmatism.py
 src/pyCTF/zeros.py
