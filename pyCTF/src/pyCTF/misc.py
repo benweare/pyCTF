@@ -177,7 +177,8 @@ def show_image( image, **kwargs ):
         ax.set_yticks([])
         if ( scale != 0 ):
             try:
-                scalebar = make_scalebar( length, scale, ax )
+                from pyCTF.misc import make_scalebar
+                scalebar = make_scalebar( val, scale, ax )
                 ax.add_artist(scalebar)
             except:
                 print('Error: could not add scalebar to image.')
@@ -258,6 +259,9 @@ def find_iradius_itheta( image, scale ):
     itheta = np.arctan2(centX, centY)
     return iradius, itheta
 
+# function to bin images.
+def bin():
+    return
 
 # line profiles
 class LineProfiles:
