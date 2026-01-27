@@ -1,8 +1,7 @@
 '''
 Classes for simulating contrast transfer functions.
 
-This module contains classes for simulating 2D and 1D contrast 
-transfer functions.
+This module contains classes for simulating 2D and 1D CTFs.
 '''
 
 import numpy as np 
@@ -46,7 +45,7 @@ class CTFSimulation2D:
 
     Methods
     ------
-    plotCTF()
+    plot_ctf()
     update()
     print_aberrations()
     show_all()
@@ -97,14 +96,9 @@ class CTFSimulation2D:
         self.square_CTF = self.damped_CTF**2
     
 
+    # Find radial distance and angle for each pixel in the image.
+    # Note, update to use the corresponding function in misc.
     def __find_radial_distance( self ):
-        '''
-        Find distance and angle from center of image.
-
-        Notes
-        -----
-        Update to use pyCTF.misc.find_iradius_itheta() instead.
-        '''
         irow, icol = np.indices(self.CTF.shape)
         centX = irow - self.CTF.shape[0] / 2.0
         centY = icol - self.CTF.shape[1] / 2.0
@@ -115,15 +109,8 @@ class CTFSimulation2D:
         return iradius, itheta
 
 
+    # Simulates 2D CTF.
     def __simulate_2D_CTF( self ):
-        '''
-        Simulate a 2D CTF
-
-        Notes
-        -----
-        Contrast transfer function (CTF) equation from literature. Models defocus, 
-        twofold astigmatism, and spherical aberration.
-        '''
         CTF = np.sin( (np.pi*self.defocus*self.lamb*(self.iradius**2) ) + 
                       (0.5*np.pi*self.Cs*(self.lamb**3)*(self.iradius**4)) +
                       np.pi*self.lamb*(self.iradius**2)*(self.C12a*np.cos(2*self.itheta) 
@@ -131,18 +118,8 @@ class CTFSimulation2D:
         return CTF
 
 
+    # Simulates 2D CTF, with alternative representation of twofold astigmatism.
     def __simulate_2D_CTF_stigmated( self ):
-        '''
-        Simulated 2D CTF with twofold astigmatism. 
-
-        Notes
-        -----
-        Astigmatism causes defocus to vary as a function of radial angle, modelled using 
-        the parameters C12a (major defocus axis), C12b (minor defocus axis), and phi 
-        (angle of astigmatism). When C12a = C12b, there is no astigmtism.
-
-        Also models defocus, and spherical aberration.
-        '''
         CTF = np.sin( (np.pi*self.defocus*self.lamb*(self.iradius**2) ) + \
                       (0.5*np.pi*self.Cs*(self.lamb**3)*(self.iradius**4)) + \
                       np.pi*self.lamb*(self.iradius**2)* 0.5*((self.C12a + self.C12b) + \
@@ -150,85 +127,24 @@ class CTFSimulation2D:
         return CTF
     
 
+    # Model of temporal coherence envelope.
     def __temporal_coherence( self ):
-        '''
-        Temporal coherence function.
-
-        Parameters
-        ----------
-        Cc : float
-            Chromatic aberration.
-        focal_spread : float
-        lamb : float
-            Electron wavelength. 
-        delta : float
-        iradius : array
-
-        Returns
-        -------
-        Et2d : array
-            Temporal coherence function.
-
-        Notes
-        -----
-        Simulates a 2D temporal coherence function. 
-        '''
         delta = self.Cc * ( self.focal_spread / ( self.kV * 1000 ))
         Et2d = np.exp( -0.25*(( np.pi* self.lamb * delta)**2) * ( self.iradius**4 ) )
         return Et2d
     
 
+    # Model of spatial coherence envelope.
     def __spatial_coherence( self ):
-        '''
-        Spatial coherence function.
-
-        Parameters
-        ----------
-        Cs : float
-            Spherical aberration.
-        beta : float
-        lamb : float
-            Electron wavelength. 
-        delta : float
-        iradius : array
-
-        Returns
-        -------
-        Es2d : array
-            Spatial coherence function.
-
-        Notes
-        -----
-        Simulates a 2D spatial coherence function.
-        '''
-        # derivative of CTF
+        # dChi is the derivative of the CTF.
         dChi_2d = (2*np.pi*self.lamb*self.iradius*self.defocus) 
-        + (2*np.pi*self.Cs*(self.lamb**3)*(self.iradius**3))# really small numbers for some reason
+        + (2*np.pi*self.Cs*(self.lamb**3)*(self.iradius**3))
         Es2d = np.exp( -(self.beta / ((4*self.lamb**2))) * abs(dChi_2d)**2 )
         return Es2d
     
 
+    # Model of aperture function.
     def __aperture_function( self ):
-        '''
-        Aperture function.
-
-        Parameters
-        ----------
-        imageX : int
-        imageY : int
-        iradius :  array
-        itheta : array
-        cutoff : float
-
-        Returns
-        -------
-        Aperture2d : array
-            Aperture function.
-
-        Notes
-        -----
-        Simulates a 2D aperture function which is 1 below cutoff, and 0 above cutoff.
-        '''
         aperture_2d = np.ones(( self.imageX, self.imageY ))
         n = range(0, len(aperture_2d[0] ))
         m = range(0, len(aperture_2d[1] ))
@@ -261,7 +177,7 @@ class CTFSimulation2D:
 
     def update( self ):
         '''
-        Update CTF simulation
+        Update CTF simulation.
 
         Notes
         -----
@@ -294,9 +210,9 @@ class CTFSimulation2D:
 
         Notes
         -----
-        Uses matplotlib to plot a figure containing the CTF, damped CTF, square CTF, 
-        aperture function, temporal coherence function, and spatial coherence function. 
-        Uses plt.subplots with ax.matshow. 
+        Uses matplotlib to plot a figure containing the CTF, damped CTF,
+        square CTF, aperture function, temporal coherence function, and
+        spatial coherence function. Uses plt.subplots with ax.matshow.
         '''
         fig, axs = plt.subplots(2, 3)
         axs[0, 0].matshow( self.CTF )
@@ -321,7 +237,7 @@ class CTFSimulation2D:
 
 class CTFSimulation1D:
     '''
-    Class for simulating 2D CTFs.
+    Class for simulating 1D CTFs.
 
     Attributes
     ----------
@@ -418,22 +334,8 @@ class CTFSimulation1D:
         return
 
 
+    # Calculates the frequency array for CTF simulation.
     def __calculateFrequencyRange( self ):
-        '''
-        Calculate frequency array.
-
-        Parameters
-        ----------
-        flim : float
-            Frequency limit.
-        fno : int
-            Number of elements in output array.
-
-        Returns
-        -------
-        frequency : array
-            Array of frequencies 0 to flim.
-        '''
         frequency = [0 for _ in range(self.fno)]
         n = range(0, self.fno)
         for i in n:
@@ -441,11 +343,8 @@ class CTFSimulation1D:
         return frequency
     
 
+    # Models the 1D CTF.
     def __calculate_CTF( self ):
-        '''
-        Calculate 1D CTF.
-
-        '''
         CTF = [0 for _ in range( self.fno )]
         n = range(0, self.fno)
         for i in n:
@@ -457,6 +356,7 @@ class CTFSimulation1D:
         return CTF
 
 
+    # Models the aperture function.
     def __aperture_function( self ):
         '''
         Calculate 1D aperture function.
@@ -471,17 +371,8 @@ class CTFSimulation1D:
         return aperture
 
 
+    # Models the temporal coherence envelope.
     def __temporal_coherence( self ):
-        '''
-        Calculate 1D temporal coherence function.
-        '''
-        # in eV
-        #deltaE = 1.5 #1.5 for 2100plus
-        # current
-        #deltaI = 1
-        #I = 1
-        # volts
-        #deltaV = 2e-6  #2e-6 # for plus2e-6
         V = self.kV * 1000
         #delta = Cc * np.sqrt( 4* ((deltaI/I)**2) * ((deltaE/V)**2) * ((deltaV/V)**2) )# spatial units
         delta = self.Cc * ( self.focal_spread / V)
@@ -493,16 +384,15 @@ class CTFSimulation1D:
         return Et
 
 
+    # Models the spatial coherence envelope.
     def __spatial_coherence( self ):
-        '''
-        Calculate 1D spatial coherence fuction.
-        '''
         Es = np.zeros(len( self.CTF ))
         dChi = np.zeros(len( self.CTF ))
         n = range(0, len( Es ))
         for i in n:
             f = float( self.flim *( i / self.fno ))
-            dChi[i] = (2*np.pi* self.lamb * f * self.defocus) + (2*np.pi*self.Cs*(self.lamb**3)*(f**3))
+            dChi[i] = (2*np.pi* self.lamb * f * self.defocus)\
+            + (2*np.pi*self.Cs*(self.lamb**3)*(f**3))
             Es[i] = np.exp( -(self.beta / ((4*(self.lamb**2)))) * abs(dChi[i])**2 )
         return Es
 

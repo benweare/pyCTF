@@ -52,8 +52,8 @@ class Fourier:
     value of z is associated with a slice [x:, y:] that corresponds to an
     image.
 
-    The terms DC (direct-current), zeroth order, and 0-order frequency may be used interchangably 
-    in this class's documentation, sorry in advance. 
+    The terms DC (direct-current), zeroth order, and 0-order frequency may be
+    used interchangably in this class's documentation, sorry in advance. 
     '''
     def __init__( self ):
         from numpy.fft import fft2

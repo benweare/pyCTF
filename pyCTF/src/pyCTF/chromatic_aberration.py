@@ -37,17 +37,16 @@ class chromaticAberration:
 
     Notes
     -----
-    This class uses the method of [literature] to find the chromatic 
-    aberration, based on how focus changes as a function of accelerating 
-    votlage. It would also be possible to measure based on how it changes as 
-    a function of lens current.
+    This class contains methods to find chromatic aberration based on how
+    focus changes as a function of accelerating voltage. It would also be
+    possible to measure based on how it changes as a function of lens current.
 
-    voltage = array of voltages e.g. np.array([200.0, 199.95, 199.90, 199.85, 199.80, 199.75, 199.70])
-    defocus = array of defocuses e.g. np.array([ -714.09, -433.04, -197.66, 0, 240.20, 458.89, 688.94 ])*1e-9
+    Data should be supplied in the following format:
+    Array of voltages e.g. np.array([200.0, 199.95, 199.90, 199.85, 199.80, 199.75, 199.70])
+    Array of defocuses e.g. np.array([ -714.09, -433.04, -197.66, 0, 240.20, 458.89, 688.94 ])*1e-9
     
     '''
 
-    #update to hold CTF class?
     def __init__( self, kV, voltage, defocus ):
         '''
         Parameters
@@ -91,60 +90,22 @@ class chromaticAberration:
             self.__fit_lmfit()
         return
 
-    # define errors on fit
+    # First order polynomial fitting  using numpy.
     def __fit_simple( self ):
-        '''
-        Fitting using numpy polyfit.
-
-        Parameters
-        ----------
-        chromaticAberration : class
-
-        Returns
-        -------
-        intercept : float
-        slope : float
-        cov : array-like
-
-        Notes
-        -----
-        Acts on chromaticAberration class, using Numpy Polyfit to perform a 
-        first-order polynomial fitting on voltageSeries (x-axis) and 
-        focusSeries (y-axis).Returns the intercept, slope, and covariance of 
-        fitting as class attributes. 
-        '''
         from numpy.polynomial import polynomial as P
         # gradient and intercept 
         [self.intercept, self.slope] = P.polyfit( (self.voltage_series/self.kV),
                                                     self.focus_series,
                                                     1,
                                                     full=False )
-        # covariance of two variables
+        # Covariance of two variables.
         self.cov = np.sqrt(np.diagonal(np.cov( (self.voltage_series/self.kV), 
                                                 self.focus_series )))
         return
 
 
+    # First order polynomial fitting using lmfit.
     def __fit_lmfit( self, **kwargs ):
-        '''
-        First-order polynomial fit using lmfit. 
-
-        Parameters
-        ----------
-        chromaticAberration : class
-
-        Returns
-        -------
-        results : class
-            lmfit ModelResults class. 
-
-        Notes
-        -----
-        Uses lmfit to perform first-order polynomial fitting of focusSeries 
-        and ( voltageSeries / voltage ). 
-        lmfit parameters are: m (gradient, in metres), c (y-intercept).
-        '''
-
         from lmfit import Model as mdl
         model = mdl( gradient_simple )
         params = model.make_params( )

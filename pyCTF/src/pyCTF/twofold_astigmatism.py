@@ -18,7 +18,6 @@ from pyCTF.misc import composite_image
 from pyCTF.ctf_profile import Profile
 
 
-# class for measuring astigmatism in CTF_image.image
 class twofoldAstigmatism( LineProfiles ):
     '''
     Class for measuring twofold astigmatism in the CTF.
@@ -50,9 +49,7 @@ class twofoldAstigmatism( LineProfiles ):
     apply_limit( vals, limits )
     plot_results( vals, slices, a, CTF2D )
     plot_angles( )
-    plot_3D( )
     print_all( )
-    mask( )
 
     Notes
     -----
@@ -81,7 +78,6 @@ class twofoldAstigmatism( LineProfiles ):
         return
 
 
-    ### methods to measure astigmatism angle ###
     def measure_angle( self ):
         '''
         Returns angle of astigmatism.
@@ -114,7 +110,6 @@ class twofoldAstigmatism( LineProfiles ):
         return
 
 
-    # autocorrelate to find angle
     def correlate_angle( self ):
         '''
         Autocorrelation of image to find astigmatism angle.
@@ -154,7 +149,6 @@ class twofoldAstigmatism( LineProfiles ):
 
 
     ### methods to find astigmatism magnitude with cross-correlation
-    # try to speed this up by only making the needed part of the CTF simulation? 
     def make_data( self, slices, a, b, simCTF, radius ):
         '''
         Simulate CTFs with a range of twofold astigmatism.
@@ -181,13 +175,13 @@ class twofoldAstigmatism( LineProfiles ):
 
         Notes
         -----
-        Creates an array containing simulated 2D CTFs in polar form, for use with 
-        twofoldAstigmatism.magnitude_correlate() to measure the magnitude of the 
-        astigmatism present in the experimental CTF.
+        Creates an array containing simulated 2D CTFs in polar form, for use
+        with twofoldAstigmatism.magnitude_correlate() to measure the magnitude
+        of the astigmatism present in the experimental CTF.
 
-        Simulations vary the minimum defocus due to astigmatism (b) with respect to the 
-        maximum defocus due to astigmatism (a), skipping values where b is greater than 
-        a to avoid redundancy and increase speed. 
+        Simulations vary the minimum defocus due to astigmatism (b) with
+        respect to the maximum defocus due to astigmatism (a), skipping values
+        where b is greater than a to avoid redundancy and increase speed. 
 
         If a = 0 nm, it is set to 0.01 nm to prevent a divide-by-zero error.
         '''
@@ -204,7 +198,7 @@ class twofoldAstigmatism( LineProfiles ):
         return polar
     
 
-    # CTFfind 4
+    # See CTFFIND4 paper for method used here.
     def magnitude_correlate( self, warped, polar ):
         '''
         Pearson's correlation coeffcient to determine astigmatism magnitude. 
@@ -223,8 +217,8 @@ class twofoldAstigmatism( LineProfiles ):
         -----
         Based on the literature methods (CTFFind 4).
 
-        Uses Pearson's correlation coeffcient (Scipy) to determine how well simulated CTFs 
-        match the experimental CTF. 
+        Uses Pearson's correlation coeffcient (Scipy) to determine how well
+        simulated CTFs match the experimental CTF. 
         '''
         from scipy.stats import pearsonr
         val = np.zeros( (np.size( polar, 0)) )
@@ -289,7 +283,7 @@ class twofoldAstigmatism( LineProfiles ):
         return vals, a, polar_list
 
 
-    ## other methods
+    # Other methods.
     def find_astig_defocus( self, vals, a ):
         '''
         Returns the magnitude of astigmatism.
@@ -311,28 +305,13 @@ class twofoldAstigmatism( LineProfiles ):
         return a[x], a[y]
     
 
+    # Under development, see CTFFIND4 paper for method of scoring.
     def _apply_limit( vals, limits ):
-        '''
-        Adjust scoring to favour lower astigmatism values.
-
-        Parameters
-        ----------
-        vals : array
-        limits : float
-
-        Returns
-        -------
-        vals_adjusted : array
-
-        Notes
-        -----
-        Under development, based on literature example (CTFFind 4).
-        '''
         vals_adjusted = vals - ((a[x] - a[y])**2 / (2*( limits**2)*256))
         return vals_adjusted
 
 
-    ## plotting functions ##
+    # Plotting functions.
     def plot_results( self, vals, slices, a, CTF2D ):
         '''
         Plot results of CTF astigmatism determination.
@@ -377,11 +356,6 @@ class twofoldAstigmatism( LineProfiles ):
         axs[1].axline(( CTF.centX, CTF.centY), (x2, y2), color='orange')
         axs[1].set_xlim([0, CTF.width])
         axs[1].set_ylim([CTF.length, 0])
-        ### add ellipses at minima?
-        #from matplotlib.patches import Ellipse
-        #ellipse = Ellipse( (400, 400), 2.6/CTF.scale, 2/CTF.scale, angle=-60, fill=False, edgecolor='r' )
-        #ax.add_patch( ellipse )
-        #ax.plot( CTF.centX, CTF.centY, 'x', color='r' )
         return
 
 
@@ -425,19 +399,6 @@ class twofoldAstigmatism( LineProfiles ):
         return
 
 
-    #3D plots of astig angle search
-    def plot_3D( self, vals, a ):
-        '''
-        Create a 3D plot of astigmatism angle search.
-        '''
-        X, Y = np.meshgrid(a, a)
-        R = np.sqrt(X**2 + Y**2)
-        Z = vals
-        fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-        ax.plot_surface(X, Y, Z, vmin=Z.min())
-        return
-
-
     # print all simulated CTF
     def print_all( self ):
         '''
@@ -458,24 +419,9 @@ class twofoldAstigmatism( LineProfiles ):
                 axs[n, m].set_yticks([])
         return
     
-    ### not in use ###
-    '''
-    Masking function.
-
-    Parameters
-    ----------
-    angle : float
-        Starting value.
-    width : float
-        Angle segment.
-
-    Notes
-    -----
-    Not currently in use. Creates of angle wedges.
-    Used in conjection with CTF_image.astig_defocus().
-    '''
-
-    def _mask( self, angle, width ):
+    ### Not in use ###
+    # Masking function for use with segments method.
+    def __mask( self, angle, width ):
         no_sectors = 1
         N = 1
         interval = np.pi / no_sectors
@@ -502,6 +448,14 @@ class twofoldAstigmatism( LineProfiles ):
                     mask[i,j] = 0
         mask = np.flip( mask ) + mask
         self.masked = np.multiply( CTF.image, mask )
-        # then do radial profile of mask, then get defocus of mask
-        #then, should be ready to process zemlin tableaus
+        return
+
+
+    #3D plots of astig angle search
+    def __plot_3D( self, vals, a ):
+        X, Y = np.meshgrid(a, a)
+        R = np.sqrt(X**2 + Y**2)
+        Z = vals
+        fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+        ax.plot_surface(X, Y, Z, vmin=Z.min())
         return

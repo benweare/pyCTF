@@ -1,5 +1,5 @@
 '''
-A class to contain contrast transfer functions.
+A class to contain contrast transfer functions (CTFs).
 '''
 
 import numpy as np
@@ -29,7 +29,7 @@ from pyCTF.twofold_astigmatism import twofoldAstigmatism
 
 class filterError( Exception ):
     '''
-    Exception raised when Zeros.filter_zeros() fails or filters all data points.
+    Exception raised when Zeros.filter_zeros() fails, or filters all data out.
 
     Attributes
     ----------
@@ -37,8 +37,8 @@ class filterError( Exception ):
 
     Notes
     -----
-    If minima if returned with 0 length, try changing the limits applied during 
-    filtering. 
+    If minima if returned with 0 length, try changing the limits applied
+    during filtering. 
 
     '''
     def __init__( self, message ):
@@ -63,7 +63,8 @@ def import_ctf( image, kV, scale ):
 
     Notes
     -----
-    Wrapper around CTF_image class declaration to make it easier to create new CTF objects.
+    Wrapper around CTF_image class declaration to make it easier to create
+    new CTF objects.
     '''
     CTF = CTFImage( image, kV, scale, LineProfiles, ZerosData )
     return CTF
@@ -107,20 +108,19 @@ class CTFImage:
     plot_background( self )
     process_profile( self, **kwargs )
     find_zeros( self, **kwargs )
-    printCsResults( self )
-    showImage( self )
-    measureDefocus( self, **kwargs )
+    print_Cs_results( self )
+    show_image( self )
+    measure_defocus( self, **kwargs )
     astig_angle( self )
     astig_defocus( self, angle, **kwargs )
-    printAstigResults( self )
 
     Notes
     -----
-    This class is the core of pyCTF. It contains the CTF as an image, and allows 
-    measurement of lens aberrations by class methods. 
+    This class is the core of pyCTF. It contains the CTF as an image, and
+    allows measurement of lens aberrations by class methods. 
 
-    Many methods of class are wrappers intended to streamline CTF processing by 
-    hiding the nuts and bolts (somewhat). 
+    Many methods of class are wrappers intended to streamline CTF processing
+    by hiding the nuts and bolts (somewhat). 
     '''
     def __init__(self, image, kV, scale, LineProfiles, ZerosData ):
         '''
@@ -141,20 +141,23 @@ class CTFImage:
         self.scale = scale
         self.image = image
         self.stage_tilt=None
-        # for background determination
-        self.LF_bkg = None # low frequency background
-        self.E_bkg = None # envelope background
-        # itheta is -180 to 180 as it's atan2
+        # Low frequency and enevelope background functions.
+        self.LF_bkg = None
+        self.E_bkg = None
+        # itheta is -180 to 180 as it uses atan2.
         self.iradius, self.itheta = find_iradius_itheta( self.image, self.scale )
         self.width = len(image[0])
         self.length = len(image[0])
         self.centX = len(image[0])/2
         self.centY = len(image[0])/2
-        self.max_freq_inscribed = self.scale * (self.width/2) # maximum frequency of inscribed circle
-        self.max_freq = self.scale * np.sqrt( (self.width/2)**2 + (self.width/2)**2 )# maximum frequency of image (corner)
-        # component classes
+        # Maximum frequency of inscribed circle.
+        self.max_freq_inscribed = self.scale * (self.width/2)
+        # Maximum frequency (corner of image).
+        self.max_freq = self.scale * np.sqrt( (self.width/2)**2\
+            + (self.width/2)**2 )
+        # Component classes.
         self.astig = twofoldAstigmatism( self )
-        # init data structures
+        # Data structures.
         LineProfiles.__init__( self )
         LensAberrations.__init__( self )
         ZerosData.__init__( self )
@@ -173,19 +176,16 @@ class CTFImage:
         defocus_guess : float
             Estimate of defocus in nm. 
         phi : float, optional
+            Known angle of astigmatism.
         astig_max : float, optional
             Maximum value of twofold astigmatism to apply.
         slices : int, optional
-            Defaults to 11 slices.
+            Number of slices, defaults to 11.
 
         Notes
         -----
-        Uses methods in twofoldAstigmatism class to measure the astigmatism in the 
-        CTF image.
-
-        Add notes on how it works.
-
-        Updates the relevant class attributes.
+        Wrapper around methods in twofoldAstigmatism class to measure the
+        astigmatism in the CTF.
         '''
         phi = kwargs.get( 'phi', self.astig.amax )
         astig_max = kwargs.get( 'max_val', 1000 )
@@ -193,7 +193,9 @@ class CTFImage:
         CTF = self
         
         # Multiply max freq by 2 as we need the diameter not the radius.
-        CTF2D = CTFSimulation2D( CTF.max_freq_inscribed*2, int(CTF.length), CTF.kV, -500)
+        CTF2D = CTFSimulation2D( CTF.max_freq_inscribed*2,
+                                int(CTF.length),
+                                CTF.kV, -500)
         CTF2D.scale = CTF.scale
         CTF2D.defocus = defocus_guess * 1e-9
         CTF2D.phi = np.deg2rad( phi )
@@ -225,7 +227,14 @@ class CTFImage:
 
         Notes
         -----
-        Wrapper around Fourier.remove_bckg() that passes class attributes to method.
+        Wrapper around Fourier.remove_bckg() that passes class attributes to
+        method.
+
+        See Also
+        --------
+        Fourier.remove_bckg()
+        CTFImage.plot_background()
+
         '''
 
         from pyCTF.fourier import Fourier
@@ -234,37 +243,6 @@ class CTFImage:
                                                                     rstart1, 
                                                                     rstart2 )
         return
-
-        # low frequency
-        #imfft = np.fft.fft2( self.image )
-        #imfft = np.fft.fftshift( imfft )
-        #iradius,_ = find_iradius_itheta( imfft, 1 )
-        #n = range(0, np.size(iradius,0))
-        #m = range(0, np.size(iradius,1))
-        #for i in n:
-        #    for j in m:
-        #        if iradius[i,j] >= rstart1:
-        #            imfft[i,j] = 0
-        #imfft = np.fft.ifft2( imfft )
-        #self.LF_bkg = np.abs( imfft )
-        #self.image = self.image - np.abs( imfft )
-        # high frequency
-        #imfft = np.abs(self.image) #natural log
-        #imfft = np.fft.fft2( imfft)
-        #imfft = np.fft.fftshift( imfft )
-        #iradius,_ = find_iradius_itheta( imfft, 1 )
-        #n = range(0, np.size(iradius,0))
-        #m = range(0, np.size(iradius,1))
-        #for i in n:
-        #    for j in m:
-        #        if iradius[i,j] >= rstart2:
-        #            imfft[i,j] = 0
-        #imfft = np.exp( np.abs(np.fft.ifft2( imfft )) )
-        #self.E_bkg = imfft
-        #self.image = self.image / self.E_bkg
-        #del( imfft )
-        #del( iradius )
-        #return 
 
     def plot_background( self ):
         '''
@@ -302,46 +280,9 @@ class CTFImage:
             print('Error: could not add scalebar to image.')
         return
 
-    ### two functions for measuring CTF zeros ###
+
+    # Extract and process the radial profile of the CTF.
     def __process_profile( self, **kwargs ):
-        '''
-        Extract and process the CTF radial profile.
-
-        Parameters
-        ----------
-        f_limits : array, optional
-            Array as [x1, x2]
-        polynomial : int, optional
-            Savitksy-Golay polynomial.
-        window : int, optional
-            Savitsky-Golay window.
-        rprof : array, optional
-        freq : array, optional
-        baseline : array, optional
-        sprof : array, optional
-        cprof : array, optional 
-        cfreq : array, optional
-        image : array, optional
-
-        Returns
-        -------
-        rprof : array
-        freq : array
-        baseline : array
-        sprof : array
-        cprof : array 
-        cfreq : array
-        image : array
-
-        Notes
-        -----
-        Wrapper around radial profile functions from ctf_profile class, that
-        acts on CTF_image class arguments. For details see following methods
-        in ctf_profile class: radial_profile(), crop_frequency(),
-        remove_baseline(), smooth_profile().
-
-        Also used by twofoldAstigmatism class, via kwargs. 
-        '''
         f_limits = kwargs.get( 'f_limits', [0, 5.0] )
         polynomial = kwargs.get( 'polynomial', 20 )
         window = kwargs.get( 'window', 1 )
@@ -357,8 +298,12 @@ class CTFImage:
         self.polynomial=polynomial
         self.window=window
         
-        rprof, _ = Profile.radial_profile( image, self.centX, self.centY )
-        freq, _ = Profile.radial_profile( self.iradius, self.centX, self.centY )
+        rprof, _ = Profile.radial_profile( image,
+                                            self.centX,
+                                            self.centY )
+        freq, _ = Profile.radial_profile( self.iradius,
+                                        self.centX,
+                                        self.centY )
         try:
             cfreq, cprof = Profile.crop_frequency( rprof, freq, f_limits )
         except:
@@ -406,62 +351,15 @@ class CTFImage:
         return
         
 
-    # clean up, some kwargs aren't used
+    # Find the minima in the CTF radial profile.
     def __find_zeros( self, **kwargs):
-        '''
-        Find the minima in the CTF radial profile.
-
-        Parameters
-        ----------
-        x_lim : array, optional
-        y_lim : array, optional
-        start : int, optional
-            Index of first minima.
-        underfocus : bool, optional
-            True for underfocus, False for overfocus.
-        minima : array, optional
-        maxima : array, optional
-        sprof : array, optional
-        cfreq : array, optional
-        indicies_min : array, optional
-        y_min : array, optional
-        x_min : array, optional
-        results : class, optional
-            lmfit ModelResults class.
-        Cs : float, optional
-        defocus : float, optinal
-        cprof : : array, optional
-
-        Warns:
-        ------
-        CTF minima not filtered.
-            May occur when passing None type to Zeros.filter_zeros().
-
-        Returns
-        -------
-        indicies_min : array
-        y_min : array
-        x_min: array
-        results : class
-            lmfit ModelResults class.
-        Cs : float
-        defocus : float
-        minima : array
-        maxima : array
-
-        Notes
-        -----
-        Wrapper around Zeros class methods that uses CTF_image class attributes 
-        by default. For details see following methods in Zeros class: 
-        calc_zeros(), filter_zeros(), calc_indicies, fit()
-
-        Also used by twofoldAstigmatism class, via kwargs. 
-        '''
         x_lim = kwargs.get( 'xlim', [0.0, self.max_freq_inscribed] )
         y_lim = kwargs.get( 'ylim', [-1.0, 1.0] )
-        start = kwargs.get( 'start', 2 )# first index to use
-        underfocus = kwargs.get( 'underfocus', True )# under or overfocus
-        # kwargs so can use for astigmatism
+        # First index to use.
+        start = kwargs.get( 'start', 2 )
+        # Under or overfocus.
+        underfocus = kwargs.get( 'underfocus', True )
+        # kwargs so can use for astigmatism.
         minima = kwargs.get( 'minima', self.minima )
         maxima = kwargs.get( 'maxima', self.maxima )
         sprof = kwargs.get( 'sprof', self.smoothed_profile )
@@ -523,14 +421,10 @@ class CTFImage:
                                 self.results )
         return
 
-    def phase_plate( CTF ):
-        '''
-        Make and show a phase plate.
-
-        Notes
-        -----
-        Under development. Function to take aberrations in CTF object and return a phase plate.
-        '''
+    def __phase_plate( CTF ):
+        #Make and show a phase plate.
+        #Under development. Function to take aberrations in CTF object and
+        #return a phase plate.
         return
 
     # convienience function to measure defocus
@@ -551,6 +445,7 @@ class CTFImage:
         ylim : array, optional
             Array as [y1, y2].
         start : int, optional
+            First integer to use when labelling minima.
         underfocus : bool, optional
             True for underfocus, False for overfocus.
 
@@ -579,7 +474,6 @@ class CTFImage:
         self.cropped_frequency = \
         self.__process_profile( f_limits=f_limits, polynomial=polynomial,\
             window=window )
-        # something going wrong with the filtering of the zeros here
         self.indicies_min,\
         self.y_min,\
         self.x_min,\
@@ -592,7 +486,7 @@ class CTFImage:
             underfocus=underfocus )
         return
 
-    ### methods for astigmatism measurement ###
+    # Methods for astigmatism measurement.
     def astig_angle( self ):
         '''
         Measure angle of twofold astigmatism in CTF.
@@ -630,27 +524,8 @@ class CTFImage:
                                 n.results )
         return
 
-    ## method to measure astigmatism via sectors method, not in use
-    def astig_defocus( self, angle, **kwargs ):
-        '''
-        Alternative method to measure twofold astigmatism.
-
-        Warnings
-        --------
-        Superseded, not in use. 
-        Suffers from poor signal-to-noise as sectors become smaller.
-        Slow for large numbers of sections.
-
-        Notes
-        -----
-        Superseded.
-
-        Based on literature approach. Divides the CTF into several angular sections, 
-        then takes the radial profile of each section and determines it's defocus. 
-
-        Sections are created by masking the CTF array, so can be slow if many masks 
-        need to be made. 
-        '''
+    ## Method to measure astigmatism via sectors method, not in use.
+    def __astig_defocus( self, angle, **kwargs ):
         polynomial = kwargs.get( 'polynomial', 20 )
         window = kwargs.get( 'window', 1 )
         f_limits = kwargs.get( 'flim', [0.0, 3.0] )

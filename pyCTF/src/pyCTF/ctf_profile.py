@@ -102,19 +102,19 @@ class Profile:
         by comparing those limits to the array freq to find the element at 
         at which to crop both arrays. 
         '''
-        # catch None being passed to cropping
+        # Catch None being passed to cropping.
         if f_limits[0] == None:
             f_limits[0] = data[0]
         if f_limits[1] == None:
             f_limits[1] = data[-1]
         range_low = np.argwhere( freq <= f_limits[0] )
         range_high = np.argwhere( freq >= f_limits[1] )
-        cropped_freq = freq[range_low[-1,0]:range_high[1,0]] #freq[range_low[-1, 0]:range_high[1, 0]]
+        cropped_freq = freq[range_low[-1,0]:range_high[1,0]]
         cropped_prof = np.zeros( np.size( cropped_freq ) )
         cropped_prof = data[range_low[-1, 0]:range_high[1, 0]]
         return cropped_freq, cropped_prof
     
-    # calls baseline_als and stores the result in class
+    # Calls baseline_als and stores the result in class.
     def remove_baseline( data ):
         '''
         Remove baseline of profile.

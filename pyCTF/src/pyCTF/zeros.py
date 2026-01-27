@@ -1,3 +1,7 @@
+'''
+A class to measure CTF zeros with contained methods.
+'''
+
 import numpy as np 
 import scipy
 from scipy.signal import find_peaks
@@ -32,12 +36,12 @@ class Zeros:
     indicies( length, **kwargs )
     plot_zeros( minima, data, freq )
     fit( x_min, y_min, lamb )
-    plot_Cs_figure( x, y, minima, x_min, y_min, results, xraw, yraw )
-    printResults( defocus, Cs, results )
+    plot_figure( x, y, minima, x_min, y_min, results, xraw, yraw )
+    print_results( defocus, Cs, results )
 
     Notes
     -----
-    Uses literature method to determine defocus and spherical aberration from 
+    Uses literature method to determine defocus and spherical aberration from
     frequency of CTF minima. Used in conjunction with radial_profiles class.
     '''
     def __init__( self ):
@@ -148,9 +152,9 @@ class Zeros:
 
         Notes
         -----
-        Generates indicies of CTF minima for use with fitting to 
-        find spherical aberration and defocus, according to the 
-        literature conventions. 
+        Generates indicies of CTF minima for use with fitting to
+        find spherical aberration and defocus, according to the
+        literature conventions.
         '''
         start = kwargs.get( 'start', 2 )
         underfocus = kwargs.get( 'underfocus', True )
