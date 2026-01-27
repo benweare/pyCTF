@@ -1,6 +1,6 @@
 # pyCTF
 
-pyCTF allows manipulation of experimental contrast transfer functions (CTFs), primarily to measure lens aberrations in transmission electron microscopy (TEM). 
+pyCTF allows manipulation of experimental contrast transfer functions (CTFs), primarily to measure lens aberrations in transmission electron microscopy (TEM). See the Jupyter Notebook for worked examples.
 
 The following objective lens aberrations can be measured:
 - Defocus
