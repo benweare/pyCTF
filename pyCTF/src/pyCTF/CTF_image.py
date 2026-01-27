@@ -166,7 +166,7 @@ class CTFImage:
 
     def astig_magnitude( self, defocus_guess, **kwargs ):
         '''
-        Wrapper to measure twofoldastigmatism magnitude.
+        Wrapper to measure twofold astigmatism magnitude.
 
         Parameters
         ----------
@@ -174,6 +174,7 @@ class CTFImage:
             Estimate of defocus in nm. 
         phi : float, optional
         astig_max : float, optional
+            Maximum value of twofold astigmatism to apply.
         slices : int, optional
             Defaults to 11 slices.
 
@@ -182,6 +183,8 @@ class CTFImage:
         Uses methods in twofoldAstigmatism class to measure the astigmatism in the 
         CTF image.
 
+        Add notes on how it works.
+
         Updates the relevant class attributes.
         '''
         phi = kwargs.get( 'phi', self.astig.amax )
@@ -189,6 +192,7 @@ class CTFImage:
         slices = kwargs.get( 'slices', 11 )
         CTF = self
         
+        # Multiply max freq by 2 as we need the diameter not the radius.
         CTF2D = CTFSimulation2D( CTF.max_freq_inscribed*2, int(CTF.length), CTF.kV, -500)
         CTF2D.scale = CTF.scale
         CTF2D.defocus = defocus_guess * 1e-9

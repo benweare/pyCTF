@@ -173,14 +173,14 @@ class chromaticAberration:
 
     # print results of simple fitting
     def __print_simple( self ):
-        print( "Cc: " + str( self.slope * 1e3 ) )
+        print( "Cc (mm): " + str( self.slope * 1e3 ) )
         return
 
 
     # print results of lmfit fitting
     def __print_lmfit( self ):
         print( self.results.fit_report( show_correl=False ) )
-        print( 'Cc: ' + str( self.results.params['m'].value * 1e3 ) + ' mm' )
+        print( 'Cc (mm): ' + str( self.results.params['m'].value * 1e3 ) + ' mm' )
         return
 
     

@@ -307,7 +307,7 @@ class CTFSimulation2D:
         axs[1, 2].matshow( self.spatial )
 
         a = [axs[0,0],axs[0,1],axs[0,2],axs[1,0],axs[1,1],axs[1,2]]
-        titles = ['CTF', 'Damped CTF', 'Dquare CTF', 'Aperture function',\
+        titles = ['CTF', 'Damped CTF', 'Square CTF', 'Aperture function',\
         'Temporal coherence','Spatial coherence']
 
         n = 0
