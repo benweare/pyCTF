@@ -334,7 +334,7 @@ class Fourier:
         centX = len(stack[0])/2
         centY = len(stack[1])/2
         # get length of radial profile
-        out, _ = Profile.radial_profile( stack[0], centX, centY )
+        out, _ = Profile.radial_profile( stack[:,:,0], centX, centY )
         output = np.zeros( [ np.size(out), np.size(stack, 2)] )
         for n in range( np.size(stack, 2) ):
             output[:, n], _ = Profile.radial_profile( stack[:, :, n], 
@@ -377,8 +377,11 @@ class Fourier:
         stack : array
             Real or integer valued array.
         width : int, optional
+            Pixel diameter for center crop.
         r1 : int, optional
         r2 : int, optional
+        verbose : string, optional
+            True to toggle console output.
 
         Returns
         -------
@@ -397,12 +400,26 @@ class Fourier:
         width = kwargs.get( 'width', None )
         r1 = kwargs.get( 'r1', 10 )
         r2 = kwargs.get( 'r2', 10 )
+        verbose = kwargs.get( 'verbose', False )
+        if (verbose == True):
+            print( '\nStarting processing through-focus series.' )
+            print( 'Performing FFT of stack.' )
         FFT = Fourier.fft_stack( stack )
+        if (verbose == True):
+            print( 'Coverting stack to real data.' )
         FFT = Fourier.log_mod( FFT )
         if ( width != None ):
+            if (verbose == True):
+                print( 'Center cropping data to range.' )
             FFT = Fourier.crop( FFT, width )
+        if (verbose == True):
+            print( 'Removing background from CTF.' )
         FFT = Fourier.remove_bckg_stack( FFT, r1, r2 )
+        if (verbose == True):
+            print( 'Measuring line profile of stack.' )
         prof = Fourier.profile_fft_stack( FFT )
+        if (verbose == True):
+            print( 'Done.' )
         return FFT, prof
 
     # import TIFF stack as a stack
@@ -546,5 +563,5 @@ class Fourier:
     
         axs[0].set_title( 'arcs' )
         axs[1].set_title( 'difference' )
-        fig.savefig( '80kV_arcs.png', dpi='figure', format='png' )
+        #fig.savefig( '80kV_arcs.png', dpi='figure', format='png' )
         return
