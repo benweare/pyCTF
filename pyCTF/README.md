@@ -1,3 +1,0 @@
-# CTF python
-
-add details

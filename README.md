@@ -11,6 +11,8 @@ Other functionality:
 - Remove background noise
 - Simulating CTFs (1D and 2D)
 
+We welcome feedback and suggestions for improvements!
+
 ## Simulating contrast transfer functions
 
 An thorough dicussion of the mathematics of CTFs can be found in the literature (Brydson, 2011). Briefly, to simulate a CTF as seen in experimental electron micrographs, we need to model the following as functions of spatial frequency ($\bf{u}$):
@@ -50,6 +52,10 @@ $$
 
 The defocus is given by the y-intercept ($\epsilon$), and gradient can be rearranged for the spherical abberation.
 
+### Twofold astigmatism
+
+pyCTF can currently measure the angle of twofold astigmatism using cross-correlation the CTF with it's mirror image (Rohou and Grigorieff, 2015).
+
 ### Chromatic aberration
 
 Chromatic aberration ($C_c$) can be measured using the following relationship (Klemperer, 1971): 
@@ -72,9 +78,7 @@ Transmission electron microscopy was performed at 200 kV on a JEOL 2100F TEM wit
 
 ### Acknowledgements
 
-This work was supported by the EPSRC \[EP/W006413/1 and EP/L022494/1].
-
-### Citations
+This work was supported by the EPSRC \[EP/W006413/1 and EP/L022494/1\].
 
 ### Citations
 - Baek SJ, Park A, Ahn YJ, Choo J. Baseline correction using asymmetrically reweighted penalized least squares smoothing. The Analyst. 2015;140(1):250–7.
@@ -84,4 +88,5 @@ This work was supported by the EPSRC \[EP/W006413/1 and EP/L022494/1].
 - Klemperer OE, Barnett ME. Electron optics. Third ed., first paperback ed. Cambridge: Cambridge Univ. Press; 2010. 506 p. (Cambridge monographs on physics).
 - Krivanek OL, Gaskell PH, Howie A. Seeing order in ‘amorphous’ materials. Nature. 1976 Aug;262(5568):454–7.
 - McMullan G, Naydenova K, Mihaylov D, Yamashita K, Peet MJ, Wilson H, et al. Structure determination by cryoEM at 100 keV. Proc Natl Acad Sci. 2023 Dec 5;120(49):e2312905120.
+- Rohou A, Grigorieff N. CTFFIND4: Fast and accurate defocus estimation from electron micrographs. J Struct Biol. 2015 Nov;192(2):216–21.
 - Zou X, Hovmöller S, Oleynikov P. Electron Crystallography: Electron Microscopy and Electron Nanodiffraction. Vol. 1. New York: Oxford University Press; 2012.
