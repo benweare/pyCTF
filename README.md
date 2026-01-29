@@ -15,7 +15,7 @@ We welcome feedback and suggestions for improvements!
 
 ## Installation
 
-Download the current build from \dist and install with pip.
+pyCTF can be installed with pip.
 
 ## Simulating contrast transfer functions
 
