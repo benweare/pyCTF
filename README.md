@@ -13,9 +13,13 @@ Other functionality:
 
 We welcome feedback and suggestions for improvements!
 
+## Installation
+
+Download the current build from \dist and install with pip.
+
 ## Simulating contrast transfer functions
 
-An thorough dicussion of the mathematics of CTFs can be found in the literature (Brydson, 2011). Briefly, to simulate a CTF as seen in experimental electron micrographs, we need to model the following as functions of spatial frequency ($\bf{u}$):
+A thorough dicussion of the mathematics of CTFs can be found in the literature (Brydson, 2011). Briefly, to simulate a CTF as seen in experimental electron micrographs, we need to model the following as functions of spatial frequency ($\bf{u}$):
 
 - Squared phase function, $\chi(\bf{u})^2$
 - Aperture function, $A(\bf{u})$
