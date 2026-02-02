@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: Weare
+    given-names: Benjamin L
+    orcid: https://orcid.org/0000-0003-4209-2604
+title: "PyCTF"
+date-released: 29-Jan-26
+url: https://github.com/benweare/pyCTF
+preferred-citation:
+  type: generic
+  title: "PyCTF"
+  url: https://github.com/benweare/pyCTF
+  date-released: 2026-29-01
+  authors:
+    - family-names: "Weare"
+      given-names: "Benjamin L"
+      orcid: "https://orcid.org/0000-0003-4209-2604"
