@@ -27,10 +27,10 @@ def __xy_to_csv( xy ):
     text = "\n".join(rows)
     return text
 
-# Function to create xy file from two numpy arrays.
 def __create_xy_from_array( x, y ):
     output = np.stack( (x, y), axis=0)
     output = np.transpose( output )
+    output = np.round(output, 3)
     return output
 
 
@@ -68,10 +68,10 @@ def __create_msa_from_array( xdata, ydata, **kwargs ):
     xunits = kwargs.get('xunits', '1/nm')
     scale = kwargs.get('scale', 1.0)
     npoints = str(np.size( xdata ))
-    xperchannel = str( scale )
+    xperchannel = str( np.round( abs(xdata[1]-xdata[0]), 3) )
     header = __create_msa_header( npoints, xunits, xperchannel )
     footer = __create_msa_footer()
     xy = __create_xy_from_array( xdata, ydata )
     xy = __xy_to_csv( xy )
-    output = __assemble_msa( header, footer, xy )
+    output = __assemble_csv( header, footer, xy )
     return output

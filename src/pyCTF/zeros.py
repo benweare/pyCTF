@@ -255,6 +255,10 @@ class Zeros:
         -----
         Uses lmfit to find the defocus and spherical aberration from an 
         experimental CTF.
+
+        n/k**2 = k^2*0.5(Cs*lamb^3) + f*lamb
+        Cs = 2m/lamb^3
+        f = c/lamb
         '''
         from lmfit import Model as mdl
         model = mdl( gradient_simple )
@@ -266,8 +270,8 @@ class Zeros:
         params['c'].value = 0.0
         params['c'].vary = True
         results = model.fit( y_min, params, x = x_min )
-        Cs = (results.params['m'].value /( ( lamb )**3)) * 1e-33 # check units conversion
-        defocus = (results.params['c'].value/( 2 * lamb )) *1e-9 # check units conversion
+        Cs = ( 2* results.params['m'].value /( ( lamb )**3)) * 1e-33 # check units conversion
+        defocus = (results.params['c'].value/( lamb )) *1e-9 # check units conversion
         return results, Cs, defocus
     
     # clean up xraw and yraw
@@ -350,7 +354,7 @@ class Zeros:
         '\n|------------------|-------|'+\
         '\n| Frequency (nm-1) | Index |'+\
         '\n|------------------|-------|' 
-        for n, m in zip(CTF.minima, CTF.indicies_min):
+        for n, m in zip(CTF.frequency[CTF.minima], CTF.indicies_min):
             space1 = ' '*(9-len(str(n)))
             space2 = ' '*(4-len(str(m)))
             string+='\n|'+space1+str(n)+'         |'+space2+str(m)+'   |'
