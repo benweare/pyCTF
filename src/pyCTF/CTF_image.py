@@ -109,7 +109,6 @@ class CTFImage:
     process_profile( self, **kwargs )
     find_zeros( self, **kwargs )
     print_Cs_results( self )
-    show_image( self )
     measure_defocus( self, **kwargs )
     astig_angle( self )
     astig_defocus( self, angle, **kwargs )

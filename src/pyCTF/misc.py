@@ -133,7 +133,7 @@ def composite_image( image1, image2, size ):
     image_2 : array_like
         Image data.
     size : float
-        Size of image.
+        Size of image, i.e. CTF.width
     niter : int
 
     Returns
@@ -153,6 +153,7 @@ def composite_image( image1, image2, size ):
     composite[size:, size:] = image2[size:, size:]
     return composite
 
+# To do: try to get scale from CTF class by default?
 def show_image( image, **kwargs ):
         '''
         Display an image of the CTF.
