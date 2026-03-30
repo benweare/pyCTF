@@ -285,11 +285,6 @@ class LineProfiles:
         Cropped frequency range of radial profile.
     bins : int
         Number of bins. 
-
-    Notes
-    -----
-    Used by the following classes: CTF_profile, twofoldAstigmatism.
-
     '''
     def __init__( self ):
         self.radial_profile = None
@@ -300,6 +295,7 @@ class LineProfiles:
         self.cropped_frequency = None
         self.bins = None
         return
+
 
 class LensAberrations:
     '''
@@ -348,6 +344,7 @@ class LensAberrations:
         self.C30 = self.Cs
         self.C3 = self.Cs
         return
+
 
 class ZerosData:
     '''

@@ -37,6 +37,7 @@ class Profile:
         self.radius = None
         return
 
+
     def radial_profile( data, centX, centY ):
         '''
         Create radial profile of 2D array.
@@ -72,6 +73,7 @@ class Profile:
         radialprofile = tbin / nr
         bins = len(nr)
         return radialprofile, bins
+
 
     def crop_frequency( data, freq, f_limits ):
         '''
@@ -114,6 +116,7 @@ class Profile:
         cropped_prof = data[range_low[-1, 0]:range_high[1, 0]]
         return cropped_freq, cropped_prof
     
+
     # Calls baseline_als and stores the result in class.
     def remove_baseline( data ):
         '''
@@ -134,6 +137,7 @@ class Profile:
         '''
         baseline = baseline_als( data, 100, 0.0001 )
         return baseline
+
 
     def smooth_profile( data, window, polynomial, **kwargs ):
         '''
@@ -170,6 +174,7 @@ class Profile:
                                 mode='interp')
         return smoothed
     
+
     def plot_radial_profile( prof, freq ):
         '''
         Matplotlib plot of profile.

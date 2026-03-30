@@ -12,7 +12,7 @@ from skimage.filters import gaussian
 from pyCTF.misc import find_iradius_itheta
 from pyCTF.misc import normalise_data_range
 
-from pyCTF.ctf_profile import Profile
+from pyCTF.profile import Profile
 
 class Fourier:
     '''
