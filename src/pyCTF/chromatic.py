@@ -1,7 +1,7 @@
 import numpy as np 
 import matplotlib.pyplot as plt 
 
-from pyCTF.misc import gradient_simple
+from pyCTF.utils import gradient_simple
 
 
 # Contains two methods for measureing Cc (lmfit and numpy).

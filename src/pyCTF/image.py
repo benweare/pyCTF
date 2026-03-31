@@ -8,20 +8,20 @@ import matplotlib.pyplot as plt
 
 import scipy
 
-from pyCTF.misc import LineProfiles
-from pyCTF.misc import ZerosData
-from pyCTF.misc import LensAberrations
+from pyCTF.utils import LineProfiles
+from pyCTF.utils import ZerosData
+from pyCTF.utils import LensAberrations
 
-from pyCTF.misc import find_iradius_itheta
-from pyCTF.misc import kv_to_lamb
-from pyCTF.misc import make_scalebar
+from pyCTF.utils import find_iradius_itheta
+from pyCTF.utils import kv_to_lamb
+from pyCTF.utils import make_scalebar
 
 from pyCTF.profile import Profile
 from pyCTF.zeros import Zeros
 
 from pyCTF.simulation import CTFSimulation2D
 
-from pyCTF.twofold_astigmatism import twofoldAstigmatism
+from pyCTF.astig import Astig
 
 #import misc
 #import twofold_astigmatism
@@ -67,11 +67,11 @@ def import_ctf( image, kV, scale ):
     Wrapper around CTF_image class declaration to make it easier to create
     new CTF objects.
     '''
-    CTF = Image( image, kV, scale, LineProfiles, ZerosData )
+    CTF = ElectronImage( image, kV, scale, LineProfiles, ZerosData )
     return CTF
 
 
-class Image:
+class ElectronImage:
     '''
     Class for holding and manipulating experimental CTFs.
 
@@ -156,8 +156,6 @@ class Image:
         # Maximum frequency (corner of image).
         self.max_freq = self.scale * np.sqrt( (self.width/2)**2\
             + (self.width/2)**2 )
-        # Component classes.
-        self.astig = twofoldAstigmatism( self )
         # Data structures.
         LineProfiles.__init__( self )
         LensAberrations.__init__( self )
@@ -176,72 +174,76 @@ class Image:
         # angle of astigmatism
         self.amin = None
         self.amax = None
+        self.polar = None
+        self.correlation = None
+        self.maximum = None
+        self.minimum = None
         return
 
     def remove_background( self, rstart1, rstart2 ):
-    '''
-    Remove CTF background using Fourier methods.
+        '''
+        Remove CTF background using Fourier methods.
 
-    Parameters
-    ----------
-    rstart1 : float
-    rstart2 : float
+        Parameters
+        ----------
+        rstart1 : float
+        rstart2 : float
 
-    Notes
-    -----
-    Wrapper around Fourier.remove_bckg() that passes class attributes to
-    method.
+        Notes
+        -----
+        Wrapper around Fourier.remove_bckg() that passes class attributes to
+        method.
 
-    See Also
-    --------
-    Fourier.remove_bckg()
-    CTFImage.plot_background()
+        See Also
+        --------
+        Fourier.remove_bckg()
+        CTFImage.plot_background()
+        '''
 
-    '''
+        from pyCTF.fourier import Fourier
 
-    from pyCTF.fourier import Fourier
-
-    self.image, self.LF_bkg, self.E_bkg = Fourier.remove_bckg( self.image, 
-                                                                rstart1, 
-                                                                rstart2 )
-    return
+        self.image, self.LF_bkg, self.E_bkg = Fourier.remove_bckg( self.image, 
+                                                                    rstart1, 
+                                                                    rstart2 )
+        return
 
 
     def get_profiles( self, **kwargs ):
-    '''
-    Wrapper around __process_profile that is more convient to use.
-    '''
-    f_limits = kwargs.get( 'f_limits', [0, 5.0] )
-    polynomial = kwargs.get( 'polynomial', 20 )
-    window = kwargs.get( 'window', 1 )
-    self.radial_profile,\
-    self.frequency,\
-    self.baseline,\
-    self.smoothed_profile,\
-    self.cropped_profile,\
-    self.cropped_frequency = __process_profile(f_limits=f_limits,
-                                                polynomial=polynomial,
-                                                window=window)
-    return
+        '''
+        Wrapper around __process_profile that is more convient to use.
+        '''
+        f_limits = kwargs.get( 'f_limits', [0, 5.0] )
+        polynomial = kwargs.get( 'polynomial', 20 )
+        window = kwargs.get( 'window', 1 )
+        self.radial_profile,\
+        self.frequency,\
+        self.baseline,\
+        self.smoothed_profile,\
+        self.cropped_profile,\
+        self.cropped_frequency = _process_profile(self, 
+                                                    f_limits=f_limits,
+                                                    polynomial=polynomial,
+                                                    window=window)
+        return
 
 
     def plot_profiles( self ):
-    '''
-    Show the results of measuring radial profiles.
-    '''
-    fig, axs = plt.subplots( 1, 2, figsize=(8,8) )
-    axs[0].plot( self.frequency, self.radial_profile, label='Radial profile' )
-    axs[0].plot( self.cropped_frequency, self.baseline, label='Baseline' )
-    axs[0].plot( self.cropped_frequency, self.cropped_profile, label='Cropped' )
-    axs[1].plot( self.cropped_frequency, self.smoothed_profile, label='Smoothed profile')
-    axs[0].set_box_aspect(1)
-    axs[1].set_box_aspect(1)
-    axs[0].set_ylabel('Intensity / a.u.', fontsize = 16)
-    axs[0].set_xlabel('Frequency / $nm^{-1}$', fontsize = 16)
-    axs[1].set_xlabel('Frequency / $nm^{-1}$', fontsize = 16)
-    axs[0].legend()
-    axs[1].legend()
-    return
+        '''
+        Show the results of measuring radial profiles.
+        '''
+        fig, axs = plt.subplots( 1, 2, figsize=(8,8) )
+        axs[0].plot( self.frequency, self.radial_profile, label='Radial profile' )
+        axs[0].plot( self.cropped_frequency, self.baseline, label='Baseline' )
+        axs[0].plot( self.cropped_frequency, self.cropped_profile, label='Cropped' )
+        axs[1].plot( self.cropped_frequency, self.smoothed_profile, label='Smoothed profile')
+        axs[0].set_box_aspect(1)
+        axs[1].set_box_aspect(1)
+        axs[0].set_ylabel('Intensity / a.u.', fontsize = 16)
+        axs[0].set_xlabel('Frequency / $nm^{-1}$', fontsize = 16)
+        axs[1].set_xlabel('Frequency / $nm^{-1}$', fontsize = 16)
+        axs[0].legend()
+        axs[1].legend()
+        return
 
 
     def plot_background( self ):
@@ -282,28 +284,28 @@ class Image:
 
 
 # Extract and process the radial profile of the CTF.
-def __process_profile( Image, **kwargs ):
+def _process_profile( ElectronImage, **kwargs ):
     f_limits = kwargs.get( 'f_limits', [0, 5.0] )
     polynomial = kwargs.get( 'polynomial', 20 )
     window = kwargs.get( 'window', 1 )
     # kwargs to allow astigmatism defocus measurement
-    rprof = kwargs.get( 'rprof', Image.radial_profile )
-    freq = kwargs.get( 'freq', Image.frequency )
-    baseline = kwargs.get( 'baseline', Image.baseline )
-    sprof = kwargs.get( 'sprof', Image.smoothed_profile )
-    cprof = kwargs.get( 'cprof', Image.cropped_profile )
-    cfreq = kwargs.get( 'cfreq', Image.cropped_frequency )
-    image = kwargs.get( 'image', Image.image )
+    rprof = kwargs.get( 'rprof', ElectronImage.radial_profile )
+    freq = kwargs.get( 'freq', ElectronImage.frequency )
+    baseline = kwargs.get( 'baseline', ElectronImage.baseline )
+    sprof = kwargs.get( 'sprof', ElectronImage.smoothed_profile )
+    cprof = kwargs.get( 'cprof', ElectronImage.cropped_profile )
+    cfreq = kwargs.get( 'cfreq', ElectronImage.cropped_frequency )
+    image = kwargs.get( 'image', ElectronImage.image )
 
-    Image.polynomial=polynomial
-    Image.window=window
+    ElectronImage.polynomial=polynomial
+    ElectronImage.window=window
     
     rprof, _ = Profile.radial_profile( image,
-                                        Image.centX,
-                                        Image.centY )
-    freq, _ = Profile.radial_profile( Image.iradius,
-                                    Image.centX,
-                                    Image.centY )
+                                        ElectronImage.centX,
+                                        ElectronImage.centY )
+    freq, _ = Profile.radial_profile( ElectronImage.iradius,
+                                    ElectronImage.centX,
+                                    ElectronImage.centY )
     try:
         cfreq, cprof = Profile.crop_frequency( rprof, freq, f_limits )
     except:
@@ -316,29 +318,29 @@ def __process_profile( Image, **kwargs ):
 
 
 # Find the minima in the CTF radial profile.
-def __find_zeros( Image, **kwargs):
-    x_lim = kwargs.get( 'xlim', [0.0, Image.max_freq_inscribed] )
+def _find_zeros( ElectronImage, **kwargs):
+    x_lim = kwargs.get( 'xlim', [0.0, ElectronImage.max_freq_inscribed] )
     y_lim = kwargs.get( 'ylim', [-1.0, 1.0] )
     # First index to use.
     start = kwargs.get( 'start', 2 )
     # Under or overfocus.
     underfocus = kwargs.get( 'underfocus', True )
     # kwargs so can use for astigmatism.
-    minima = kwargs.get( 'minima', Image.minima )
-    maxima = kwargs.get( 'maxima', Image.maxima )
-    sprof = kwargs.get( 'sprof', Image.smoothed_profile )
-    cfreq = kwargs.get( 'freq', Image.cropped_frequency )
-    indicies_min = kwargs.get( 'indicies_min', Image.indicies_min )
-    y_min = kwargs.get( 'y_min', Image.y_min )
-    x_min = kwargs.get( 'x_min', Image.x_min )
-    results = kwargs.get( 'results', Image.results )
-    Cs = kwargs.get( 'Cs', Image.Cs )
-    defocus = kwargs.get( 'defocus', Image.defocus )
-    cprof = kwargs.get( 'cprof', Image.cropped_profile )
-    freq = kwargs.get( 'cprof', Image.frequency )
+    minima = kwargs.get( 'minima', ElectronImage.minima )
+    maxima = kwargs.get( 'maxima', ElectronImage.maxima )
+    sprof = kwargs.get( 'sprof', ElectronImage.smoothed_profile )
+    cfreq = kwargs.get( 'freq', ElectronImage.cropped_frequency )
+    indicies_min = kwargs.get( 'indicies_min', ElectronImage.indicies_min )
+    y_min = kwargs.get( 'y_min', ElectronImage.y_min )
+    x_min = kwargs.get( 'x_min', ElectronImage.x_min )
+    results = kwargs.get( 'results', ElectronImage.results )
+    Cs = kwargs.get( 'Cs', ElectronImage.Cs )
+    defocus = kwargs.get( 'defocus', ElectronImage.defocus )
+    cprof = kwargs.get( 'cprof', ElectronImage.cropped_profile )
+    freq = kwargs.get( 'cprof', ElectronImage.frequency )
 
-    Image.xlim=x_lim
-    Image.ylim=y_lim
+    ElectronImage.xlim=x_lim
+    ElectronImage.ylim=y_lim
 
     minima, maxima = Zeros.calc_zeros( sprof )
 
@@ -359,36 +361,36 @@ def __find_zeros( Image, **kwargs):
         return
     indicies_min, x_min, y_min = Zeros.calc_indicies( minima, sprof,\
         cfreq, start=start, underfocus=underfocus)
-    results, Cs, defocus = Zeros.fit( x_min, y_min, Image.lamb )
+    results, Cs, defocus = Zeros.fit( x_min, y_min, ElectronImage.lamb )
     return indicies_min, y_min, x_min, results, Cs, defocus, minima, maxima
 
 
-def print_Cs_results( Image, **kwargs ):
+def print_Cs_results( ElectronImage, **kwargs ):
     verbose = kwargs.get( 'verbose', True)
-    Zeros.plot_figure( Image.cropped_frequency, 
-                        Image.smoothed_profile, 
-                        Image.minima, 
-                        Image.x_min, 
-                        Image.y_min, 
-                        Image.results,
-                        Image.cropped_frequency,
-                        (Image.cropped_profile-Image.baseline),
-                        Image.indicies_min)
+    Zeros.plot_figure( ElectronImage.cropped_frequency, 
+                        ElectronImage.smoothed_profile, 
+                        ElectronImage.minima, 
+                        ElectronImage.x_min, 
+                        ElectronImage.y_min, 
+                        ElectronImage.results,
+                        ElectronImage.cropped_frequency,
+                        (ElectronImage.cropped_profile-ElectronImage.baseline),
+                        ElectronImage.indicies_min)
     
     if (verbose == True):
-        Zeros.print_results( Image,
-                            Image.polynomial,
-                            Image.window,
-                            Image.xlim,
-                            Image.ylim,
-                            Image.defocus,
-                            Image.Cs,
-                            Image.results )
+        Zeros.print_results( ElectronImage,
+                            ElectronImage.polynomial,
+                            ElectronImage.window,
+                            ElectronImage.xlim,
+                            ElectronImage.ylim,
+                            ElectronImage.defocus,
+                            ElectronImage.Cs,
+                            ElectronImage.results )
     return
 
 
 # Wrapper to measure defocus.
-def measure_defocus( Image, **kwargs ):
+def measure_defocus( ElectronImage, **kwargs ):
     '''
     Measure the defocus of a CTF.
 
@@ -422,42 +424,42 @@ def measure_defocus( Image, **kwargs ):
     polynomial = kwargs.get( 'polynomial', 20 )
     window = kwargs.get( 'window', 1 )
     f_limits = kwargs.get( 'f_limits', [0.0, 5.0] )
-    xlim = kwargs.get( 'xlim', [0.0, self.max_freq_inscribed] )
+    xlim = kwargs.get( 'xlim', [0.0, ElectronImage.max_freq_inscribed] )
     ylim = kwargs.get( 'ylim', [-1.0, 1.0] )
     start = kwargs.get( 'start', 2 )
     underfocus = kwargs.get( 'underfocus', True )
-    Image.radial_profile,\
-    Image.frequency,\
-    Image.baseline,\
-    Image.smoothed_profile,\
-    Image.cropped_profile,\
-    Image.cropped_frequency = \
-    Image.__process_profile( f_limits=f_limits, polynomial=polynomial,\
+    ElectronImage.radial_profile,\
+    ElectronImage.frequency,\
+    ElectronImage.baseline,\
+    ElectronImage.smoothed_profile,\
+    ElectronImage.cropped_profile,\
+    ElectronImage.cropped_frequency = \
+    _process_profile( ElectronImage, f_limits=f_limits, polynomial=polynomial,\
         window=window )
-    Image.indicies_min,\
-    Image.y_min,\
-    Image.x_min,\
-    Image.results,\
-    Image.Cs,\
-    Image.defocus,\
-    Image.minima,\
-    Image.maxima = \
-    Image.__find_zeros( xlim=xlim,ylim=ylim,start=start,\
+    ElectronImage.indicies_min,\
+    ElectronImage.y_min,\
+    ElectronImage.x_min,\
+    ElectronImage.results,\
+    ElectronImage.Cs,\
+    ElectronImage.defocus,\
+    ElectronImage.minima,\
+    ElectronImage.maxima = \
+    _find_zeros( ElectronImage, xlim=xlim,ylim=ylim,start=start,\
         underfocus=underfocus )
     return
 
 
 #WIP
-def __phase_plate( Image ):
+def _phase_plate( ElectronImage ):
     # Aperture.
-    plate = CTFSimulation2D( Image.max_freq_inscribed*2,
-                            int(Image.length),
-                            Image.kV, -500)
-    plate.defocus = Image.defocus
-    plate.C12a = Image.C12a
-    plate.C12b = Image.C12b
-    plate.phi = Image.phi
-    plate.Cs = Image.Cs
+    plate = CTFSimulation2D( ElectronImage.max_freq_inscribed*2,
+                            int(ElectronImage.length),
+                            ElectronImage.kV, -500)
+    plate.defocus = ElectronImage.defocus
+    plate.C12a = ElectronImage.C12a
+    plate.C12b = ElectronImage.C12b
+    plate.phi = ElectronImage.phi
+    plate.Cs = ElectronImage.Cs
     plate.update()
     fig, ax = plt.subplots(1)
     ax.matshow( plate.square_CTF )

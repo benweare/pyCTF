@@ -7,7 +7,7 @@ to determine lens aberrations, and simulation of contrast transfer functions.
 
 print('invoking __init__.py for ' + str(__name__) )
 
-import pyCTF.misc
+import pyCTF.utils
 import pyCTF.profile
 import pyCTF.zeros
 import pyCTF.fourier

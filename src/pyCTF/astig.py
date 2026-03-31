@@ -10,15 +10,15 @@ import skimage
 from skimage.transform import warp_polar
 from skimage.filters import gaussian
 
-from pyCTF.misc import LineProfiles
-from pyCTF.misc import ZerosData
-from pyCTF.misc import make_scalebar
-from pyCTF.misc import composite_image
+from pyCTF.utils import LineProfiles
+from pyCTF.utils import ZerosData
+from pyCTF.utils import make_scalebar
+from pyCTF.utils import composite_image
 
 from pyCTF.profile import Profile
 
 
-def astig_magnitude( Image, defocus_guess, **kwargs ):
+def astig_magnitude( ElectronImage, defocus_guess, **kwargs ):
     '''
     Wrapper to measure twofold astigmatism magnitude.
 
@@ -40,24 +40,24 @@ def astig_magnitude( Image, defocus_guess, **kwargs ):
     '''
     from pyCTF.astig import Astig
 
-    phi = kwargs.get( 'phi', Image.amax )
+    phi = kwargs.get( 'phi', ElectronImage.amax )
     astig_max = kwargs.get( 'max_val', 1000 )
     slices = kwargs.get( 'slices', 11 )
     
     # Multiply max freq by 2 as we need the diameter not the radius.
-    CTF2D = CTFSimulation2D( Image.max_freq_inscribed*2,
-                            int(Image.length),
-                            Image.kV, -500)
-    CTF2D.scale = Image.scale
+    CTF2D = CTFSimulation2D( ElectronImage.max_freq_inscribed*2,
+                            int(ElectronImage.length),
+                            ElectronImage.kV, -500)
+    CTF2D.scale = ElectronImage.scale
     CTF2D.defocus = defocus_guess * 1e-9
     CTF2D.phi = np.deg2rad( phi )
     CTF2D.update()
 
-    vals, a, polar_list = Astig.magnitude_measure( Image.image, 
+    vals, a, polar_list = Astig.magnitude_measure( ElectronImage.image, 
                                                         slices, 
                                                         astig_max,
                                                         CTF2D,
-                                                        radius=int(np.round((Image.length/2))) )
+                                                        radius=int(np.round((ElectronImage.length/2))) )
     x, y = Astig.__find_astig_defocus( vals, a )
     
     CTF2D.C12a = x[0] *1e-9
@@ -70,7 +70,7 @@ def astig_magnitude( Image, defocus_guess, **kwargs ):
 
 
 # Methods for astigmatism measurement.
-def astig_angle( Image ):
+def astig_angle( ElectronImage ):
     '''
     Measure angle of twofold astigmatism in CTF.
 
@@ -79,13 +79,13 @@ def astig_angle( Image ):
     Wrapper to streamline measuring astigmatism to a single call.
     '''
     # check for profiles
-    Image.radial_profile, _ = Profile.radial_profile( Image.image, Image.centX, Image.centY )
-    Image.frequency, _ = Profile.radial_profile( Image.iradius, Image.centX, Image.centY )
-    Astig.measure_angle( Image )
+    ElectronImage.radial_profile, _ = Profile.radial_profile( ElectronImage.image, ElectronImage.centX, ElectronImage.centY )
+    ElectronImage.frequency, _ = Profile.radial_profile( ElectronImage.iradius, ElectronImage.centX, ElectronImage.centY )
+    Astig.measure_angle( ElectronImage )
     return
 
 
-def print_astig_results( Image ):
+def print_astig_results( ElectronImage ):
     '''
     Show outcome of twofold astigmatism measurement.
 
@@ -93,18 +93,18 @@ def print_astig_results( Image ):
     -----
     Wrapper around Zeros.plotCsFigure() and Zeros.printResults().
     '''
-    Zeros.plotCsFigure( Image.cropped_frequency, 
-                        Image.smoothed_profile, 
-                        Image.minima, 
-                        Image.x_min, 
-                        Image.y_min, 
-                        Image.results,
-                        Image.cropped_frequency,
-                        (Image.cropped_profile-Image.baseline) )
+    Zeros.plotCsFigure( ElectronImage.cropped_frequency, 
+                        ElectronImage.smoothed_profile, 
+                        ElectronImage.minima, 
+                        ElectronImage.x_min, 
+                        ElectronImage.y_min, 
+                        ElectronImage.results,
+                        ElectronImage.cropped_frequency,
+                        (ElectronImage.cropped_profile-ElectronImage.baseline) )
     
-    Zeros.printResults( Image.defocus, 
-                            Image.Cs, 
-                            Image.results )
+    Zeros.printResults( ElectronImage.defocus, 
+                            ElectronImage.Cs, 
+                            ElectronImage.results )
     return
 
 
@@ -143,13 +143,13 @@ class Astig( LineProfiles ):
 
     Notes
     -----
-    Used almost exclusively in conjunction with the CTF_image class.
+    Used almost exclusively in conjunction with the ElectronImage class.
 
     For a mathematical description of astigmatism, see the literautre.
     '''
 
 
-    def measure_angle( Image ):
+    def measure_angle( ElectronImage ):
         '''
         Returns angle of astigmatism.
 
@@ -160,27 +160,32 @@ class Astig( LineProfiles ):
         reprentation of CTF, then searches for maximum displacement via
         cross-correlation using twofoldAstigmatism.correlate_angle(). 
         '''
+
         #from skimage. transform import warp_polar
         #from skimage.filters import gaussian
-        polar = warp_polar( Image, ( Image.centX,Image.centY ),
-            radius = Image.length/2 )
-        polar = gaussian( polar, sigma=1.5 )
-        polar = polar[ :, 40:350 ]
-        Image.amax, Image.correlation, Image.maximum, Image.minimum = Astig.correlate_angle( Image )
-        if (Image.amax > 360 or Image.amax < 0):
+        ElectronImage.polar = warp_polar( ElectronImage.image,
+            ( ElectronImage.centX,ElectronImage.centY ),
+            radius = ElectronImage.length/2 )
+        # Apply Gaussian blur.
+        ElectronImage.polar = gaussian( ElectronImage.polar, sigma=1.5 )
+        ElectronImage.polar = ElectronImage.polar[ :, 40:350 ]
+        ElectronImage.amax, ElectronImage.correlation, ElectronImage.maximum,\
+        ElectronImage.minimum = Astig.correlate_angle( ElectronImage )
+
+        if (ElectronImage.amax > 360 or ElectronImage.amax < 0):
             print( 'angleError: returned angle was greater than 360 or less than 0.' )
             print( 'Found angle (degrees): ' + str(self.amax) )
-        if ( Image.amax >= 180 ):
-            Image.amax = Image.amax - 180
-        Image.amin = Image.amax - 90
-        if ( Image.amin < 0 ):
-            Image.amin = Image.amax + 90
-        if ( Image.amin > 360 ):
-            Image.amin = Image.amax - 90
+        if ( ElectronImage.amax >= 180 ):
+            ElectronImage.amax = ElectronImage.amax - 180
+        ElectronImage.amin = ElectronImage.amax - 90
+        if ( ElectronImage.amin < 0 ):
+            ElectronImage.amin = ElectronImage.amax + 90
+        if ( ElectronImage.amin > 360 ):
+            ElectronImage.amin = ElectronImage.amax - 90
         return
 
 
-    def correlate_angle( Image ):
+    def correlate_angle( ElectronImage ):
         '''
         Autocorrelation of image to find astigmatism angle.
 
@@ -192,14 +197,16 @@ class Astig( LineProfiles ):
         of the cross-correlation.
         '''
         from scipy.signal import correlate
-        output = correlate( Image.polar, np.flip( Image.polar, 0 ), mode='same' )
+        output = correlate( ElectronImage.polar,
+            np.flip( ElectronImage.polar, 0 ),
+            mode='same' )
         maximum = np.where( output == output.max() )
         minimum = np.where( output == output.min() )
-        angle = maximum[0]*(np.size( Image.polar[1] ) / 360 )
+        angle = maximum[0]*(np.size( ElectronImage.polar[1] ) / 360 )
         return angle, output, maximum, minimum
 
 
-    def calc_angles( Image ):
+    def calc_angles( ElectronImage ):
         '''
         Calculate values to draw lines on an image.
 
@@ -209,12 +216,12 @@ class Astig( LineProfiles ):
         '''
         # line coordinates
         l = 500 
-        a1 = Image.amax
-        a2   = Image.amin
-        x1 = Image.centX + l * np.sin(np.radians( a1 ))
-        y1 = Image.centY - l * np.cos(np.radians( a1 ))
-        x2 = Image.centX + l * np.sin(np.radians( a2 ))
-        y2 = Image.centY - l * np.cos(np.radians( a2 ))
+        a1 = ElectronImage.amax
+        a2   = ElectronImage.amin
+        x1 = ElectronImage.centX + l * np.sin(np.radians( a1 ))
+        y1 = ElectronImage.centY - l * np.cos(np.radians( a1 ))
+        x2 = ElectronImage.centX + l * np.sin(np.radians( a2 ))
+        y2 = ElectronImage.centY - l * np.cos(np.radians( a2 ))
         return x1[0], y1[0], x2[0], y2[0]
 
 
@@ -382,7 +389,7 @@ class Astig( LineProfiles ):
 
 
     # Plotting functions.
-    def plot_results( Image, vals, slices, a, CTF2D ):
+    def plot_results( ElectronImage, vals, slices, a, CTF2D ):
         '''
         Plot results of CTF astigmatism determination.
 
@@ -412,23 +419,23 @@ class Astig( LineProfiles ):
             axs[0].set_yticklabels([])
         axs[0].set_xlabel('C12b')
         axs[0].set_ylabel('C12a')
-        composite = composite_image( Image.image, CTF2D.square_CTF,
-            int(np.round(Image.length/2)) )
+        composite = composite_image( ElectronImage.image, CTF2D.square_CTF,
+            int(np.round(ElectronImage.length/2)) )
         axs[1].matshow( composite )
         axs[1].set_xticks([])
         axs[1].set_yticks([])
-        scalebar = make_scalebar( 1, Image.scale, axs[1] )
+        scalebar = make_scalebar( 1, ElectronImage.scale, axs[1] )
         axs[1].add_artist(scalebar)
         #draw lines on image
         x1, y1, x2, y2 = self.calc_angles( )
-        axs[1].axline(( Image.centX, Image.centY), (x1, y1), color='red')
-        axs[1].axline(( Image.centX, Image.centY), (x2, y2), color='orange')
-        axs[1].set_xlim([0, Image.width])
-        axs[1].set_ylim([Image.length, 0])
+        axs[1].axline(( ElectronImage.centX, ElectronImage.centY), (x1, y1), color='red')
+        axs[1].axline(( ElectronImage.centX, ElectronImage.centY), (x2, y2), color='orange')
+        axs[1].set_xlim([0, ElectronImage.width])
+        axs[1].set_ylim([ElectronImage.length, 0])
         return
 
 
-    def plot_angles( Image ):
+    def plot_angles( ElectronImage ):
         '''
         Plot results of astigmatism angle determination.
 
@@ -437,15 +444,18 @@ class Astig( LineProfiles ):
         Acts on twofoldAstigmatism class, uses Matplotlib.
         '''
         fig, axs = plt.subplots(1, 2, figsize=(8, 8))
-        axs[0].matshow( Image.polar )
-        axs[0].hlines(Image.amax, 0, len(Image.polar), color='orange',
+        axs[0].matshow( ElectronImage.polar )
+        axs[0].hlines(ElectronImage.amax, 0, len(ElectronImage.polar), color='orange',
             label='Minimum defocus')
-        axs[0].hlines(Image.amin, 0, len(Image.polar), color='red',
+        axs[0].hlines(ElectronImage.amin, 0, len(ElectronImage.polar), color='red',
             label='Maximum defocus')
-        axs[0].set_xlim([0, len(Image.polar[0])])
+        axs[0].set_xlim([0, len(ElectronImage.polar[0])])
         #axs[0].set_ylim([0, len(self.polar[1])])
-        axs[1].matshow( Image.correlation )
-        axs[1].plot( Image.maximum[1], Image.maximum[0], 'x', color='red',
+        axs[1].matshow( ElectronImage.correlation )
+        axs[1].plot( ElectronImage.maximum[1],
+            ElectronImage.maximum[0],
+            'x',
+            color='red',
             label='Maximum' )
         titles = ['Polar image', 'Autocorrelation']
         a = [ axs[0], axs[1] ]
@@ -457,7 +467,7 @@ class Astig( LineProfiles ):
             n = n+1
         #fig.legend( loc='' )
         try:
-            scalebar = make_scalebar( 0.5, Image.scale, axs[0] )
+            scalebar = make_scalebar( 0.5, ElectronImage.scale, axs[0] )
             axs[0].add_artist(scalebar)
         except:
             print('Error: could not add scalebar to image.')

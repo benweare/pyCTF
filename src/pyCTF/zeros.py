@@ -7,8 +7,8 @@ import scipy
 from scipy.signal import find_peaks
 import matplotlib.pyplot as plt
 
-import pyCTF.misc
-from pyCTF.misc import gradient_simple
+import pyCTF.utils
+from pyCTF.utils import gradient_simple
 
 
 class indicieError( Exception ):

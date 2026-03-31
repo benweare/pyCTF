@@ -9,8 +9,8 @@ import skimage
 from skimage import io
 from skimage.filters import gaussian
 
-from pyCTF.misc import find_iradius_itheta
-from pyCTF.misc import normalise_data_range
+from pyCTF.utils import find_iradius_itheta
+from pyCTF.utils import normalise_data_range
 
 from pyCTF.profile import Profile
 

@@ -4,7 +4,7 @@ import scipy
 from scipy.signal import savgol_filter
 from scipy.signal import find_peaks
 
-from pyCTF.misc import baseline_als
+from pyCTF.utils import baseline_als
 
 class Profile:
     '''

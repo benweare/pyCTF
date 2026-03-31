@@ -31,14 +31,14 @@ def kv_to_lamb( kV ):
     Calulate relativistic electron wavelength from accelerating voltage, 
     using the standard equation (Williams and Carter, (1996)).
 
-    Used by classes: CTF_image, CTF_simulation_1D, CTF_simulation_2D.
     """
     E = kV*1000
     PT = scipy.constants.h * scipy.constants.c
     PBA = (scipy.constants.e *E)*(scipy.constants.e *E)
     PBB = 2*scipy.constants.e*E*scipy.constants.m_e*(scipy.constants.c)\
     *(scipy.constants.c)
-    lamb = PT/np.sqrt(PBA+PBB)#lambda in metres
+    # Wavelength in meters.
+    lamb = PT/np.sqrt(PBA+PBB)
     return lamb
 
 def normalise_data_range( data, **kwargs ):
@@ -91,7 +91,8 @@ def baseline_als( y, lam, p, **kwargs ):
     """
     n_iter = kwargs.get('n_iter', 10)
     L = len( y )
-    D = sparse.diags([1,-2,1],[0,-1,-2], shape=(L,L-2))
+    # Fix data type mismatch from SciPu update.
+    D = sparse.diags([1,-2,1],[0,-1,-2], shape=(L,L-2), dtype='float')
     w = np.ones( L )
     for i in range( n_iter ):
         W = sparse.spdiags(w, 0, L, L)
@@ -172,18 +173,29 @@ def show_image( image, **kwargs ):
         import matplotlib.pyplot as plt
         scale = kwargs.get( 'scale', 0 )
         val = kwargs.get( 'length', 0.5 )
+        cbar = kwargs.get('cbar', True)
+        norm = kwargs.get('norm', True)
         fig, ax = plt.subplots()
-        ax.matshow( image )
+        if norm == True:
+            cax = ax.matshow( normalise_data_range(image) )
+        else:
+            cax=ax.matshow( image )
         ax.set_xticks([])
         ax.set_yticks([])
         if ( scale != 0 ):
             try:
-                from pyCTF.misc import make_scalebar
+                from pyCTF.utils import make_scalebar
                 scalebar = make_scalebar( val, scale, ax )
                 ax.add_artist(scalebar)
             except:
                 print('Error: could not add scalebar to image.')
+        if cbar == True:
+            try:
+                cbar = fig.colorbar( mappable=cax )
+            except:
+                print('Error: could not add colourbar to image.')
         return
+
 
 def make_scalebar( val, scale, ax ):
     '''
@@ -216,6 +228,7 @@ def make_scalebar( val, scale, ax ):
                             frameon=False,
                             size_vertical=1)
     return scalebar
+
 
 def find_iradius_itheta( image, scale ):
     '''
