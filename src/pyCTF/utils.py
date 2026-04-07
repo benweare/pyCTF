@@ -387,3 +387,6 @@ class ZerosData:
         self.indicies_max = None
         self.results = None
         return
+
+    def _float_to_rgb( image ):
+        return

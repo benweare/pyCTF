@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from pyCTF.utils import kv_to_lamb
 from pyCTF.utils import LensAberrations
 from pyCTF.utils import LineProfiles
+from pyCTF.utils import normalise_data_range
 
 
 class CTFSimulation2D:
@@ -54,7 +55,7 @@ class CTFSimulation2D:
     -----
     flim is diameter, not radius.
     '''
-    def __init__( self, flim, image_size, kV, defocus ):
+    def __init__( self, flim, image_size, kV, defocus, **kwargs ):
         '''
         Parameters
         ----------
@@ -65,19 +66,30 @@ class CTFSimulation2D:
         '''
          ## lens aberrations ##
         LensAberrations.__init__( self )
-        self.Cs = 1.6 * 1e-3
-        self.Cc = 1.6 * 1e-3
-        self.C12a = 0 * 1e-9 # minor defocus axis
-        self.C12b = 0 * 1e-9 # major defocus axis
-        self.phi = 0 
-        self.beta =  0 * 1e-3
         LineProfiles.__init__( self )
-        ## params ##
-        self.image_size = image_size
+        self.cutoff = kwargs.get('aperture', flim) *1e9
+        self.temporal_mode = kwargs.get('mode', 0)
+        self.Cs = kwargs.get('Cs', 1.6) * 1e-3
+        self.Cc = kwargs.get('Cc', 1.6) * 1e-3
+        self.C12a = kwargs.get('C12a', 0) * 1e-9
+        self.C12b = kwargs.get('C12b', 0) * 1e-9
+        self.phi = kwargs.get('phi', 0) 
+        self.beta =  kwargs.get('beta', 0) * 1e-3
+        # Objective current instability.
+        self.dI = kwargs.get('delta_current',0)
+        self.I = kwargs.get('current', 0)
+        # Source voltage instability, in Volts.
+        self.dV = kwargs.get('', 0)
+        # Electron energy spread in electron-volts.
+        self.dE = kwargs.get('delta_E',0)
         self.kV = kV
         self.lamb = kv_to_lamb( kV )
+        self.E = self.kV*1000
+        # Focal spread.
+        self.focal_spread = kwargs.get('focal_spread', 5.25)
+        ## params ##
+        self.image_size = image_size
         self.flim = flim * 1e9
-        self.cutoff = flim * 1e9
         self.defocus = defocus * 1e-9
         self.scale = self.image_size / self.flim
         ## images ##
@@ -86,14 +98,26 @@ class CTFSimulation2D:
         self.CTF = np.ones(( self.imageX, self.imageY ))
         self.cent = np.array([ self.CTF.shape[0] / 2.0, self.CTF.shape[0] ]) 
         self.iradius, self.itheta = self.__find_radial_distance( )
-        self.focal_spread = 5.25
         ## simulations ##
-        self.CTF = self.__simulate_2D_CTF()
-        self.aperture = self.__aperture_function( )
-        self.temporal = self.__temporal_coherence( )
-        self.spatial= self.__spatial_coherence( )
+        self.update()
+
+
+    def update( self ):
+        '''
+        Update CTF simulation.
+
+        Notes
+        -----
+        Call after changing class attributes to re-simulate CTF.
+        '''
+        self.CTF = self.__simulate_2D_CTF_stigmated()
+        self.aperture = self.__aperture_function()
+        self.temporal = self.__temporal_coherence( self.temporal_mode )
+        self.spatial = self.__spatial_coherence()
         self.damped_CTF = self.CTF * self.temporal * self.spatial * self.aperture
         self.square_CTF = self.damped_CTF**2
+        self.square_CTF = normalise_data_range( self.square_CTF )
+        return
     
 
     # Find radial distance and angle for each pixel in the image.
@@ -110,25 +134,35 @@ class CTFSimulation2D:
 
 
     # Simulates 2D CTF.
-    def __simulate_2D_CTF( self ):
-        CTF = np.sin( (np.pi*self.defocus*self.lamb*(self.iradius**2) ) + 
-                      (0.5*np.pi*self.Cs*(self.lamb**3)*(self.iradius**4)) +
-                      np.pi*self.lamb*(self.iradius**2)*(self.C12a*np.cos(2*self.itheta) 
-                                                         + self.C12b*np.sin(2*self.itheta) ))
-        return CTF
-
-
-    # Simulates 2D CTF, with alternative representation of twofold astigmatism.
     def __simulate_2D_CTF_stigmated( self ):
-        CTF = np.sin( (np.pi*self.defocus*self.lamb*(self.iradius**2) ) + \
-                      (0.5*np.pi*self.Cs*(self.lamb**3)*(self.iradius**4)) + \
-                      np.pi*self.lamb*(self.iradius**2)* 0.5*((self.C12a + self.C12b) + \
+        CTF = np.sin( (np.pi*self.defocus*self.lamb*(self.iradius**2) )+\
+                      (0.5*np.pi*self.Cs*(self.lamb**3)*(self.iradius**4))+\
+                      np.pi*self.lamb*(self.iradius**2)*0.5*((self.C12a + self.C12b)+\
                       (self.C12a - self.C12b)*np.cos(2*(self.itheta - self.phi))) )
         return CTF
     
 
+    # Calculate focal spread. W&C p.471.
+    def __calculate_focal_spread( self, mode ):
+        try:
+            if mode == 1:
+                # Objective current instability.
+                Iq = self.dI / self.I
+                # Source voltage instability.
+                Iv = self.dV / (self.kV*1000)
+                # Electron energy spread.
+                Ie = self.dE / self.E
+                delta = self.Cc * np.sqrt( 4 * (Iq**2) + (Iv**2) + (Ie**2) )
+            if mode == 0:
+                delta = self.Cc*(self.focal_spread/(self.kV*1000))
+        except:
+            print('Error: could not caculate focal spread.')
+        return delta
+
+
     # Model of temporal coherence envelope.
-    def __temporal_coherence( self ):
+    def __temporal_coherence( self, mode ):
+        delta = self.__calculate_focal_spread( mode )
         delta = self.Cc * ( self.focal_spread / ( self.kV * 1000 ))
         Et2d = np.exp( -0.25*(( np.pi* self.lamb * delta)**2) * ( self.iradius**4 ) )
         return Et2d
@@ -136,10 +170,10 @@ class CTFSimulation2D:
 
     # Model of spatial coherence envelope.
     def __spatial_coherence( self ):
-        # dChi is the derivative of the CTF.
-        dChi_2d = (2*np.pi*self.lamb*self.iradius*self.defocus) 
-        + (2*np.pi*self.Cs*(self.lamb**3)*(self.iradius**3))
-        Es2d = np.exp( -(self.beta / ((4*self.lamb**2))) * abs(dChi_2d)**2 )
+        preexp = ((np.pi*self.beta)/self.lamb)**2
+        dChi_2d = ((self.Cs*(self.lamb**3)*(self.iradius**3)\
+            +(self.defocus*self.lamb*self.iradius) ))**2
+        Es2d = np.exp( preexp * dChi_2d )
         return Es2d
     
 
@@ -178,29 +212,14 @@ class CTFSimulation2D:
         return
     
 
-    def update( self ):
-        '''
-        Update CTF simulation.
-
-        Notes
-        -----
-        Call after changing class attributes to re-simulate CTF.
-        '''
-        self.CTF = self.__simulate_2D_CTF_stigmated()
-        self.aperture = self.__aperture_function()
-        self.temporal = self.__temporal_coherence()
-        self.spatial = self.__spatial_coherence()
-        self.damped_CTF = self.CTF * self.temporal * self.spatial * self.aperture
-        self.square_CTF = self.damped_CTF**2
-        return
-
-
     def print_aberrations( self ):
         '''
         Print lens aberrations in class.
         '''
-        string = ('defocus (nm): ' + str( self.defocus * 1e9 )  + '\n' +
-        'C12 (nm, deg): ' + str( self.C12a * 1e9 ) + ", " + str( self.phi )  + '\n' +
+        string = ('defocus (nm): ' + str( self.defocus * 1e9 )+'\n'+
+        'C12 (nm, deg): ' + str( self.C12a * 1e9 )+", "+\
+        str( self.C12b * 1e9 )+\
+        ", "+str( self.phi )+'\n'+
         'Cs (mm): ' + str( self.Cs * 1e3 )  + '\n' +
         'Cc (mm):  ' + str( self.Cc * 1e3 )  + '\n')
         print( string )
@@ -284,6 +303,8 @@ class CTFSimulation1D:
         fno : int
         kV : float
         defocus : float
+        mode : int
+            Flag for how to calculate temporal coherence.
         '''
         self.cutoff = kwargs.get('aperture', flim) *1e9
         self.kV = kV
@@ -297,7 +318,7 @@ class CTFSimulation1D:
         self.dI = kwargs.get('delta_current',0)
         self.I = kwargs.get('current', 0)
         # Source voltage instability, in Volts.
-        self.dV = kwargs.get('', 0)
+        self.dV = kwargs.get('delta_voltage', 0)
         # Electron energy spread in electron-volts.
         self.dE = kwargs.get('delta_E',0)
         self.E = self.kV*1000
@@ -312,7 +333,8 @@ class CTFSimulation1D:
         self.frequency = self.__calculateFrequencyRange()
         self.CTF = self.__calculate_CTF()
         self.aperture = self.__aperture_function( )
-        self.temporal = self.__temporal_coherence( )
+        self.temporal_mode = kwargs.get('mode', 0)
+        self.temporal = self.__temporal_coherence( self.temporal_mode )
         self.spatial= self.__spatial_coherence( )
         self.damped_CTF = self.CTF * self.temporal * self.spatial * self.aperture
         self.square_CTF = self.damped_CTF**2
@@ -339,9 +361,9 @@ class CTFSimulation1D:
         '''
         self.frequency = self.__calculateFrequencyRange()
         self.CTF = self.__calculate_CTF()
-        self.aperture = self.__aperture_function( )
-        self.temporal = self.__temporal_coherence( )
-        self.spatial= self.__spatial_coherence( )
+        self.aperture = self.__aperture_function()
+        self.temporal = self.__temporal_coherence( self.temporal_mode )
+        self.spatial= self.__spatial_coherence()
         self.damped_CTF = self.CTF * self.temporal * self.spatial * self.aperture
         self.square_CTF = self.damped_CTF**2
         return
@@ -386,26 +408,31 @@ class CTFSimulation1D:
 
 
     # Calculate focal spread. W&C p.471.
-    def __calculate_focal_spread( self ):
-        # Objective current instability.
-        #Iq = self.dI / self.I
-        # Source voltage instability.
-        #Iv = self.dV / (self.kV*1000)
-        # Electron energy spread.
-        #Ie = self.dE / self.E
-        #print('Error: error calculating focal spread.')
-        #delta = self.Cc * np.sqrt( 4 * (Iq**2) + (Iv**2) + (Ie**2) )
-        delta = self.Cc*(self.focal_spread/(self.kV*1000))
+    def __calculate_focal_spread( self, mode ):
+        try:
+            if mode == 1:
+                # Objective current instability.
+                Iq = self.dI / self.I
+                # Source voltage instability.
+                Iv = self.dV / (self.kV*1000)
+                # Electron energy spread.
+                Ie = self.dE / self.E
+                delta = self.Cc * np.sqrt( 4 * (Iq**2) + (Iv**2) + (Ie**2) )
+            if mode == 0:
+                delta = self.Cc*(self.focal_spread/(self.kV*1000))
+        except:
+            print('Error: error calculating focal spread.')
+            delta = 0
         return delta
 
 
     # Models the temporal coherence envelope.
     # Update to use physical quants.
-    def __temporal_coherence( self ):
+    def __temporal_coherence( self, mode ):
         V = self.kV * 1000
         Et = np.zeros(len(self.CTF))
         n = range(0, len( Et ))
-        delta = self.__calculate_focal_spread( )
+        delta = self.__calculate_focal_spread( mode )
         for i in n:
             f = float( self.flim*( i / self.fno ))
             Et[i] = np.exp( -0.25*(( np.pi* self.lamb * delta)**2) * f**4)
@@ -414,8 +441,6 @@ class CTFSimulation1D:
 
     # Models the spatial coherence envelope.
     # W&C p. 471
-    # Currently in the wrong scale range?
-    # And plotting weirdly?
     def __spatial_coherence( self ):
         Es = np.zeros(len( self.CTF ))
         dChi = np.zeros(len( self.CTF ))
@@ -423,12 +448,8 @@ class CTFSimulation1D:
         preexp = ((np.pi*self.beta)/self.lamb)**2
         for i in n:
             f = float( self.flim *( i / self.fno ))
-            # Derivative of the CTF. Check this.
             dChi[i] = ((self.Cs*(self.lamb**3)*(f**3) +\
                 (self.defocus*self.lamb*f) ))**2
-            #dChi[i] = (2*np.pi* self.lamb * f * self.defocus)\
-            #+ (2*np.pi*self.Cs*(self.lamb**3)*(f**3))
-            #Es[i] = np.exp( -(self.beta / ((4*(self.lamb**2)))) * (dChi[i])**2 )
             Es[i] = np.exp( preexp * -dChi[i] )
         return Es
 
@@ -452,13 +473,25 @@ class CTFSimulation1D:
         fig, ax  = plt.subplots(1,1)
         fig.figaspect=[1,2]
         #freq = [x*1e-9 for x in self.frequency]
-        ax.plot((self.frequency)*1e-9, self.square_CTF, label='CTF$^2$', color='darkviolet')
+        ax.plot((self.frequency)*1e-9,
+            self.square_CTF,
+            label='CTF$^2$',
+            color='darkviolet')
         # plot aperture function
-        ax.plot(self.frequency*1e-9, self.aperture, label='Aperture', color='orange')
+        ax.plot(self.frequency*1e-9,
+            self.aperture,
+            label='Aperture',
+            color='orange')
         # plot temporal envelope
-        ax.plot(self.frequency*1e-9, self.temporal, label='Temporal envelope', color='forestgreen')
+        ax.plot(self.frequency*1e-9,
+            self.temporal,
+            label='Temporal envelope',
+            color='forestgreen')
         # plot spatial envelope
-        ax.plot(self.frequency*1e-9, self.spatial, label='Spatial envelope', color='firebrick')
+        ax.plot(self.frequency*1e-9,
+            self.spatial,
+            label='Spatial envelope',
+            color='firebrick')
         # axis settings
         ax.axhline(0, color='black', linewidth=0.5)
         # plot settings
@@ -482,19 +515,19 @@ class CTFSimulation1D:
         aperture function, temporal coherence function, and spatial coherence function. 
         Uses plt.subplots with ax.plot().
         '''
-        fig, axs = plt.subplots(2, 3, figsize=(8, 8))
-        axs[0, 0].plot( self.frequency*1e-9, self.CTF )
-        axs[0, 0].set_ylim([-1,1])
-        axs[0, 1].plot( self.frequency*1e-9, self.damped_CTF )
-        axs[0, 1].set_ylim([-1,1])
-        axs[0, 2].plot( self.frequency*1e-9, self.square_CTF )
-        axs[0, 2].set_ylim([0,1])
-        axs[1, 0].plot( self.frequency*1e-9, self.aperture )
-        axs[1, 0].set_ylim([0,1])
-        axs[1, 1].plot( self.frequency*1e-9, self.temporal )
-        axs[1, 1].set_ylim([0,1])
-        axs[1, 2].plot( self.frequency*1e-9, self.spatial )
-        axs[1, 2].set_ylim([0,1])
+        fig, axs = plt.subplots(2, 3, figsize=(10, 10))
+        axs[0, 0].plot( self.frequency*1e-9, self.CTF, color='k' )
+        #axs[0, 0].set_ylim([-1,1])
+        axs[0, 1].plot( self.frequency*1e-9, self.damped_CTF, color='k' )
+        #axs[0, 1].set_ylim([-1,1])
+        axs[0, 2].plot( self.frequency*1e-9, self.square_CTF, color='k' )
+        #axs[0, 2].set_ylim([0,1])
+        axs[1, 0].plot( self.frequency*1e-9, self.aperture, color='k' )
+        #axs[1, 0].set_ylim([0,1.01])
+        axs[1, 1].plot( self.frequency*1e-9, self.temporal, color='k' )
+        #axs[1, 1].set_ylim([0,1.01])
+        axs[1, 2].plot( self.frequency*1e-9, self.spatial, color='k' )
+        axs[1, 2].set_ylim([0,1.01])
         a = [axs[0,0],axs[0,1],axs[0,2],axs[1,0],axs[1,1],axs[1,2]]
         titles = ['CTF', 'Damped CTF', 'Square CTF', 'Aperture function',\
         'Temporal coherence','Spatial coherence']
@@ -505,7 +538,7 @@ class CTFSimulation1D:
             ax.set_title( titles[n] )
             ax.set_box_aspect( 1 )
             ax.set_xlabel('Frequency / nm$^{-1}$')
-            ax.set_ylabel('Intensity')
+            ax.set_ylabel('Intensity', fontsize=10)
             n=n+1
-        #fig.layout='tight'
+        fig.tight_layout()
         return
