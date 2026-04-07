@@ -6,11 +6,19 @@ in the PyCTF package.
 '''
 
 import numpy as np
-
 import scipy
-from scipy import sparse
-from scipy.constants import( e, c, m_e, h )
-from scipy.sparse.linalg import spsolve 
+
+def scherzer_defocus( input ):
+    '''
+    Scherzer defocus, in nanometers.
+    '''
+    scherzer = (-4/3) * np.sqrt( input.Cs * input.lamb )
+    return scherzer*1e9
+
+# Lichte defocus.
+#def lichte_defocus():
+#    lichte = (-3/4) * Cs * (R * lamb**2)
+#    return lichte
 
 def kv_to_lamb( kV ):
     """
@@ -32,6 +40,7 @@ def kv_to_lamb( kV ):
     using the standard equation (Williams and Carter, (1996)).
 
     """
+    from scipy.constants import( e, c, m_e, h )
     E = kV*1000
     PT = scipy.constants.h * scipy.constants.c
     PBA = (scipy.constants.e *E)*(scipy.constants.e *E)
@@ -89,9 +98,10 @@ def baseline_als( y, lam, p, **kwargs ):
     method of Eilersand Boelens (2005), via Baek et al. (2014).
 
     """
+    from scipy.sparse.linalg import spsolve 
+    from scipy import sparse
     n_iter = kwargs.get('n_iter', 10)
     L = len( y )
-    # Fix data type mismatch from SciPu update.
     D = sparse.diags([1,-2,1],[0,-1,-2], shape=(L,L-2), dtype='float', format='csr')
     w = np.ones( L )
     for i in range( n_iter ):
