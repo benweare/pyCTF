@@ -92,7 +92,7 @@ def baseline_als( y, lam, p, **kwargs ):
     n_iter = kwargs.get('n_iter', 10)
     L = len( y )
     # Fix data type mismatch from SciPu update.
-    D = sparse.diags([1,-2,1],[0,-1,-2], shape=(L,L-2), dtype='float')
+    D = sparse.diags([1,-2,1],[0,-1,-2], shape=(L,L-2), dtype='float', format='csr')
     w = np.ones( L )
     for i in range( n_iter ):
         W = sparse.spdiags(w, 0, L, L)

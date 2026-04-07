@@ -79,7 +79,7 @@ class CTFSimulation2D:
         self.dI = kwargs.get('delta_current',0)
         self.I = kwargs.get('current', 0)
         # Source voltage instability, in Volts.
-        self.dV = kwargs.get('', 0)
+        self.dV = kwargs.get('delta_voltage', 0)
         # Electron energy spread in electron-volts.
         self.dE = kwargs.get('delta_E',0)
         self.kV = kV
