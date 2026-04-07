@@ -1,6 +1,6 @@
 [project]
 name = "pyCTF"
-version = "0.0.1"
+version = "0.1.0-beta"
 authors = [
   { name="Benjamin L Weare", email="benjamin.weare1@nottingham.ac.uk" }]
 description = "Python for CTF measurement"
