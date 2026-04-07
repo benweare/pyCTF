@@ -7,8 +7,9 @@ import scipy
 from scipy.signal import find_peaks
 import matplotlib.pyplot as plt
 
-import pyCTF.misc
-from pyCTF.misc import gradient_simple
+import pyCTF.utils
+from pyCTF.utils import gradient_simple
+
 
 class indicieError( Exception ):
     '''
@@ -21,6 +22,7 @@ class indicieError( Exception ):
     def __init__( self, message ):
         self.message = message
         return
+
 
 # class to hold methods for determining defocus and Cs via zeros method
 class Zeros:
@@ -46,6 +48,7 @@ class Zeros:
     '''
     def __init__( self ):
         return
+
 
     def fit_gradient( x_min, y_min, lamb ):
         '''
@@ -73,6 +76,7 @@ class Zeros:
         defocus = -intercept /( -2 * lamb )
         return intercept, slope, Cs, defocus
     
+
     def calc_zeros( data ):
         '''
         Find maxima and minima of array.
@@ -93,6 +97,7 @@ class Zeros:
         minima, _ = scipy.signal.find_peaks( -data )
         maxima, _ = scipy.signal.find_peaks( data )
         return minima, maxima
+
 
     def filter_zeros( minima, prof, freq, xlim, ylim ):
         '''
@@ -127,6 +132,7 @@ class Zeros:
         minima = np.array([x for x in minima if prof[x] <= ylim[1]])
         minima = np.array([x for x in minima if prof[x] >= ylim[0]])
         return minima
+
 
     # add indicies for maxima
     # add pos/neg for under/overfocus
@@ -166,6 +172,7 @@ class Zeros:
         x_min = ( freq[ minima ] )**2
         y_min = ( indicies_min ) / ( freq[ minima ]**2 )
         return indicies_min, x_min, y_min
+
 
     def indicies( length, **kwargs ):
         '''
@@ -215,6 +222,7 @@ class Zeros:
         mini = mini[ start : end ]
         return mini
 
+
     def plot_zeros( minima, data, freq ):
         '''
         Plot CTF with zeros marked.
@@ -233,6 +241,7 @@ class Zeros:
         ax.plot(freq[ minima ], data[ minima ], 'x')
         return
     
+
     # make sure units on results all work fine
     def fit( x_min, y_min, lamb ):
         '''
@@ -274,6 +283,7 @@ class Zeros:
         defocus = (results.params['c'].value/( lamb )) *1e-9 # check units conversion
         return results, Cs, defocus
     
+
     # clean up xraw and yraw
     def plot_figure( x, y, minima, x_min, y_min, results, xraw, yraw, indi_min ):
         '''
@@ -314,6 +324,7 @@ class Zeros:
         axs[1].legend()
         return
 
+
     def print_results(CTF, poly, win, xlim, ylim, defocus, Cs, results):
         '''
         Print results of fitting to console.
@@ -324,6 +335,7 @@ class Zeros:
         print( results.fit_report(show_correl=False)+'\n' )
         print( Zeros.__results_table(CTF, poly, win, xlim, ylim, defocus, Cs, results) )
         return
+
 
     # Make a table of results from fitting parameters.
     def __results_table( CTF, poly, win, xlim, ylim, defocus, Cs, results ):
