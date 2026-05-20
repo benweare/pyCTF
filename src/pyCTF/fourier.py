@@ -2,6 +2,11 @@
 Module for Fourier-space methods.
 '''
 
+# Added numba jit to speed up, needs testing.
+
+import numba
+from numba import jit
+
 import numpy as np 
 import matplotlib.pyplot as plt
 
@@ -61,6 +66,7 @@ class Fourier:
         from numpy.fft import fftshift
         return
 
+    @jit
     def imfft( image ):
         '''
         Fast Fourier transform of a square array.
@@ -83,6 +89,7 @@ class Fourier:
         FT = np.fft.fftshift( FT )
         return FT
 
+    @jit
     def inv_imfft( image ):
         '''
         Inverse fast Fourier transform of a square array.
@@ -100,6 +107,7 @@ class Fourier:
         imfft = np.fft.ifft2( imfft )
         return imfft
 
+    @jit
     def log_mod( image ):
         '''
         Log-modulus of array.
@@ -123,6 +131,7 @@ class Fourier:
         return logmod
 
     # fix counting stack length
+    @jit
     def fft_stack( stack ):
         '''
         2D FFT on each slice in a stack. 
@@ -149,6 +158,7 @@ class Fourier:
             output[:, :, n] = Fourier.imfft( stack[:, :, n] )
         return output
 
+    @jit
     def fft3d( stack ):
         '''
         3DFFT of a stack.
@@ -190,7 +200,6 @@ class Fourier:
         axs[1].matshow( data )
         return
 
-    # 
     def crop( image, width, **kwargs ):
         '''
         Centre-crop and array to a specified size.
@@ -230,6 +239,7 @@ class Fourier:
         return out
 
     # redundant with method in CTF image class, but more general
+    @jit
     def remove_bckg( image, rstart1, rstart2 ):
         '''
         Remove background from CTF via Fourier methods.
@@ -276,8 +286,8 @@ class Fourier:
         imfft = np.exp( np.abs(np.fft.ifft2( imfft )) )
         E_bkg = imfft
         image = image / E_bkg
-        del( imfft )
-        del( iradius )
+        #del( imfft )
+        #del( iradius )
         return image, LF_bkg, E_bkg
 
     def remove_bckg_stack( stack, rstart1, rstart2 ):
@@ -422,6 +432,7 @@ class Fourier:
             print( 'Done.' )
         return FFT, prof
 
+
     # import TIFF stack as a stack
     def import_stack( string ):
         '''
@@ -487,6 +498,8 @@ class Fourier:
         FT, _, _ = Fourier.remove_bckg( FT, rs1, rs2 )
         return FT
 
+
+    @jit
     def measure_arcs( image, width ):
         '''
         Measure the arcs in the 3D Fourier transform.
@@ -521,6 +534,7 @@ class Fourier:
         + middle
         output[:, 2] = range(np.size(filtered[:, 1]))
         return output, filtered
+
 
     def plot_arcs( image, output ):
         '''

@@ -6,6 +6,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy
 
+import numba
+from numba import jit
+
 import skimage
 from skimage.transform import warp_polar
 from skimage.filters import gaussian
@@ -185,6 +188,7 @@ class Astig( LineProfiles ):
         return
 
 
+    @jit
     def correlate_angle( ElectronImage ):
         '''
         Autocorrelation of image to find astigmatism angle.
@@ -206,6 +210,7 @@ class Astig( LineProfiles ):
         return angle, output, maximum, minimum
 
 
+    @jit
     def calc_angles( ElectronImage ):
         '''
         Calculate values to draw lines on an image.
@@ -225,6 +230,7 @@ class Astig( LineProfiles ):
         return x1[0], y1[0], x2[0], y2[0]
 
 
+    @jit
     ### methods to find astigmatism magnitude with cross-correlation
     def __make_data( slices, a, b, simCTF, radius ):
         '''
@@ -275,6 +281,7 @@ class Astig( LineProfiles ):
         return polar
     
 
+    @jit
     # See CTFFIND4 paper for method used here.
     def __magnitude_correlate( warped, polar ):
         '''
@@ -307,6 +314,7 @@ class Astig( LineProfiles ):
         return val
     
 
+    @jit
     def magnitude_measure( image, slices, max_val, CTF2D, **kwargs ):
         '''
         Wrapper to measure magnitude of astigmatism.
@@ -360,6 +368,7 @@ class Astig( LineProfiles ):
         return vals, a, polar_list
 
 
+    @jit
     # Other methods.
     def __find_astig_defocus( vals, a ):
         '''

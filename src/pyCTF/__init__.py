@@ -3,9 +3,7 @@ This module allows manipulation of experimental contrast transfer functons (CTFs
 to determine lens aberrations, and simulation of contrast transfer functions.
 '''
 
-# Update package so depdancies are called within functions that need them only?
-
-print('invoking __init__.py for ' + str(__name__) )
+#print('invoking __init__.py for ' + str(__name__) )
 
 import pyCTF.utils
 import pyCTF.profile

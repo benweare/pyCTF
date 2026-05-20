@@ -7,6 +7,9 @@ import scipy
 from scipy.signal import find_peaks
 import matplotlib.pyplot as plt
 
+import numba
+from numba import jit
+
 import pyCTF.utils
 from pyCTF.utils import gradient_simple
 
@@ -50,6 +53,7 @@ class Zeros:
         return
 
 
+    @jit(nopython=True)
     def fit_gradient( x_min, y_min, lamb ):
         '''
         Fit gradient for spherical aberration.
@@ -77,6 +81,7 @@ class Zeros:
         return intercept, slope, Cs, defocus
     
 
+    @jit(nopython=True)
     def calc_zeros( data ):
         '''
         Find maxima and minima of array.
@@ -99,6 +104,7 @@ class Zeros:
         return minima, maxima
 
 
+    @jit(nopython=True)
     def filter_zeros( minima, prof, freq, xlim, ylim ):
         '''
         Filter data by passed limts. 

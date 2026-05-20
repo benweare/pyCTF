@@ -1,5 +1,8 @@
 import numpy as np
 
+import numba
+from numba import jit
+
 import scipy
 from scipy.signal import savgol_filter
 from scipy.signal import find_peaks
@@ -38,6 +41,7 @@ class Profile:
         return
 
 
+    @jit
     def radial_profile( data, centX, centY ):
         '''
         Create radial profile of 2D array.
@@ -75,6 +79,7 @@ class Profile:
         return radialprofile, bins
 
 
+    @jit
     def crop_frequency( data, freq, f_limits ):
         '''
         Crop profile to a range.
