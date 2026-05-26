@@ -239,7 +239,6 @@ class Fourier:
         return out
 
     # redundant with method in CTF image class, but more general
-    @jit
     def remove_bckg( image, rstart1, rstart2 ):
         '''
         Remove background from CTF via Fourier methods.

@@ -216,6 +216,7 @@ def show_image( image, **kwargs ):
                 cbar = fig.colorbar( mappable=cax )
             except:
                 print('Error: could not add colourbar to image.')
+        plt.show()
         return
 
 
@@ -252,6 +253,7 @@ def make_scalebar( val, scale, ax ):
     return scalebar
 
 
+@jit#(debug=True)
 def find_iradius_itheta( image, scale ):
     '''
     Find the distance from the centre and radial angle of each pixel in an 
@@ -282,8 +284,8 @@ def find_iradius_itheta( image, scale ):
     As iradius is calculated with atan2, the angle varies from -pi to pi. The
     angle is minimum at 9 o'clock and increases clockwise.
     '''
-    imageX = np.size( image, 1)
-    imageY = np.size( image, 0)
+    imageX = image.shape[1] #np.size( image, np.int64(1) )
+    imageY = image.shape[0]#np.size( image, 0)
     radius = imageX/2
     CTF2d = np.ones((imageX,imageY))
     irow, icol = np.indices( image.shape )

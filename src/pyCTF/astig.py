@@ -20,6 +20,7 @@ from pyCTF.utils import composite_image
 
 from pyCTF.profile import Profile
 
+from scipy.signal import correlate
 
 def astig_magnitude( ElectronImage, defocus_guess, **kwargs ):
     '''
@@ -151,7 +152,8 @@ class Astig( LineProfiles ):
     For a mathematical description of astigmatism, see the literautre.
     '''
 
-
+    
+    # Numba JIT cannot determine type for "Electron Image"
     def measure_angle( ElectronImage ):
         '''
         Returns angle of astigmatism.
@@ -164,11 +166,10 @@ class Astig( LineProfiles ):
         cross-correlation using twofoldAstigmatism.correlate_angle(). 
         '''
 
-        #from skimage. transform import warp_polar
-        #from skimage.filters import gaussian
-        ElectronImage.polar = warp_polar( ElectronImage.image,
-            ( ElectronImage.centX,ElectronImage.centY ),
+        ElectronImage.polar = warp_polar( ElectronImage.image,\
+            ( ElectronImage.centX,ElectronImage.centY ),\
             radius = ElectronImage.length/2 )
+
         # Apply Gaussian blur.
         ElectronImage.polar = gaussian( ElectronImage.polar, sigma=1.5 )
         ElectronImage.polar = ElectronImage.polar[ :, 40:350 ]
@@ -180,13 +181,13 @@ class Astig( LineProfiles ):
             print( 'Found angle (degrees): ' + str(self.amax) )
         if ( ElectronImage.amax >= 180 ):
             ElectronImage.amax = ElectronImage.amax - 180
+
         ElectronImage.amin = ElectronImage.amax - 90
         if ( ElectronImage.amin < 0 ):
             ElectronImage.amin = ElectronImage.amax + 90
         if ( ElectronImage.amin > 360 ):
             ElectronImage.amin = ElectronImage.amax - 90
         return
-
 
     @jit
     def correlate_angle( ElectronImage ):
@@ -200,7 +201,6 @@ class Astig( LineProfiles ):
         it's mirror image, then uses numpy.where() to find the maximum and minima 
         of the cross-correlation.
         '''
-        from scipy.signal import correlate
         output = correlate( ElectronImage.polar,
             np.flip( ElectronImage.polar, 0 ),
             mode='same' )
