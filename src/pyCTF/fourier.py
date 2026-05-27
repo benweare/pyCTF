@@ -3,6 +3,7 @@ Module for Fourier-space methods.
 '''
 
 # Added numba jit to speed up, needs testing.
+# Requires rocket-fft 0.3.1 on top of numba to handle the FFTs
 
 import numba
 from numba import jit
@@ -66,7 +67,7 @@ class Fourier:
         from numpy.fft import fftshift
         return
 
-    @jit
+    @jit(debug=True)
     def imfft( image ):
         '''
         Fast Fourier transform of a square array.
@@ -85,6 +86,7 @@ class Fourier:
         -----
         Moves DC frequencies to centre of output array.
         '''
+        FT = np.zeros( image.size )
         FT = np.fft.fft2( image )
         FT = np.fft.fftshift( FT )
         return FT

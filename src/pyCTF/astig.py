@@ -5,6 +5,7 @@ A class to measure twofold astigmatism in CTFs.
 import numpy as np 
 import matplotlib.pyplot as plt
 import scipy
+from scipy.signal import correlate
 
 import numba
 from numba import jit
@@ -19,8 +20,6 @@ from pyCTF.utils import make_scalebar
 from pyCTF.utils import composite_image
 
 from pyCTF.profile import Profile
-
-from scipy.signal import correlate
 
 def astig_magnitude( ElectronImage, defocus_guess, **kwargs ):
     '''
@@ -189,7 +188,7 @@ class Astig( LineProfiles ):
             ElectronImage.amin = ElectronImage.amax - 90
         return
 
-    @jit
+
     def correlate_angle( ElectronImage ):
         '''
         Autocorrelation of image to find astigmatism angle.
@@ -201,12 +200,21 @@ class Astig( LineProfiles ):
         it's mirror image, then uses numpy.where() to find the maximum and minima 
         of the cross-correlation.
         '''
-        output = correlate( ElectronImage.polar,
-            np.flip( ElectronImage.polar, 0 ),
+        output = correlate( ElectronImage.polar,\
+            np.flip( ElectronImage.polar, 0 ),\
             mode='same' )
+        angle, output, maximum, minimum = Astig._get_correlation( output,\
+                                                                ElectronImage.polar )
+        return angle, output, maximum, minimum
+
+
+    @jit
+    def _get_correlation( output, image ):
+        # Split into seperate function as Scipy correlate not
+        # working well with Numba.
         maximum = np.where( output == output.max() )
         minimum = np.where( output == output.min() )
-        angle = maximum[0]*(np.size( ElectronImage.polar[1] ) / 360 )
+        angle = maximum[0]*(np.size( image[1] ) / 360 )
         return angle, output, maximum, minimum
 
 
@@ -230,7 +238,7 @@ class Astig( LineProfiles ):
         return x1[0], y1[0], x2[0], y2[0]
 
 
-    @jit
+    #@jit
     ### methods to find astigmatism magnitude with cross-correlation
     def __make_data( slices, a, b, simCTF, radius ):
         '''
