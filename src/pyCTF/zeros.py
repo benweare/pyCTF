@@ -81,7 +81,7 @@ class Zeros:
         return intercept, slope, Cs, defocus
     
 
-    @jit
+    #@jit
     def calc_zeros( data ):
         '''
         Find maxima and minima of array.
