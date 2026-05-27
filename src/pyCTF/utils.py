@@ -5,9 +5,14 @@ This module contains miscellanous functions used by other  modules
 in the PyCTF package.
 '''
 
+import numba
+from numba import jit
+
 import numpy as np
 import scipy
+from scipy.constants import( e, c, m_e, h )
 
+@jit
 def scherzer_defocus( input ):
     '''
     Scherzer defocus, in nanometers.
@@ -20,6 +25,7 @@ def scherzer_defocus( input ):
 #    lichte = (-3/4) * Cs * (R * lamb**2)
 #    return lichte
 
+@jit
 def kv_to_lamb( kV ):
     """
     Calculate accelerating voltage from wavelength.
@@ -40,7 +46,6 @@ def kv_to_lamb( kV ):
     using the standard equation (Williams and Carter, (1996)).
 
     """
-    from scipy.constants import( e, c, m_e, h )
     E = kV*1000
     PT = scipy.constants.h * scipy.constants.c
     PBA = (scipy.constants.e *E)*(scipy.constants.e *E)
@@ -50,7 +55,8 @@ def kv_to_lamb( kV ):
     lamb = PT/np.sqrt(PBA+PBB)
     return lamb
 
-def normalise_data_range( data, **kwargs ):
+@jit
+def normalise_data_range( data, dmin=0, dmax=1 ):
     '''
     Normalise range of array.
 
@@ -69,8 +75,8 @@ def normalise_data_range( data, **kwargs ):
     Normalise data to a range using feature scaling. 
 
     '''
-    dmin = kwargs.get('dmin', 0)
-    dmax = kwargs.get('dmax', 1)
+    #dmin = kwargs.get('dmin', 0)
+    #dmax = kwargs.get('dmax', 1)
     return ((data-np.min(data))/(np.max(data)-np.min(data)))*( dmax - dmin )
 
 def baseline_als( y, lam, p, **kwargs ):
@@ -102,7 +108,11 @@ def baseline_als( y, lam, p, **kwargs ):
     from scipy import sparse
     n_iter = kwargs.get('n_iter', 10)
     L = len( y )
-    D = sparse.diags([1,-2,1],[0,-1,-2], shape=(L,L-2), dtype='float', format='csr')
+    D = sparse.diags([1,-2,1],
+                    [0,-1,-2],
+                    shape=(L,L-2),
+                    dtype='float',
+                    format='csr')
     w = np.ones( L )
     for i in range( n_iter ):
         W = sparse.spdiags(w, 0, L, L)
@@ -111,7 +121,7 @@ def baseline_als( y, lam, p, **kwargs ):
         w = p * (y > z) + (1-p) * (y < z)
     return z
 
-# (y=m*x+c) for fitting
+
 def gradient_simple( x, m, c ):
     """
     Gradient of a straight line.
@@ -132,6 +142,7 @@ def gradient_simple( x, m, c ):
     """
     y = m * x + c
     return y
+
 
 def composite_image( image1, image2, size ):
     '''
@@ -163,6 +174,7 @@ def composite_image( image1, image2, size ):
     composite[:, :] = image1[:, :]
     composite[size:, size:] = image2[size:, size:]
     return composite
+
 
 # To do: try to get scale from CTF class by default?
 def show_image( image, **kwargs ):
@@ -204,6 +216,7 @@ def show_image( image, **kwargs ):
                 cbar = fig.colorbar( mappable=cax )
             except:
                 print('Error: could not add colourbar to image.')
+        plt.show()
         return
 
 
@@ -240,6 +253,7 @@ def make_scalebar( val, scale, ax ):
     return scalebar
 
 
+@jit#(debug=True)
 def find_iradius_itheta( image, scale ):
     '''
     Find the distance from the centre and radial angle of each pixel in an 
@@ -270,8 +284,8 @@ def find_iradius_itheta( image, scale ):
     As iradius is calculated with atan2, the angle varies from -pi to pi. The
     angle is minimum at 9 o'clock and increases clockwise.
     '''
-    imageX = np.size( image, 1)
-    imageY = np.size( image, 0)
+    imageX = image.shape[1] #np.size( image, np.int64(1) )
+    imageY = image.shape[0]#np.size( image, 0)
     radius = imageX/2
     CTF2d = np.ones((imageX,imageY))
     irow, icol = np.indices( image.shape )

@@ -5,6 +5,10 @@ A class to measure twofold astigmatism in CTFs.
 import numpy as np 
 import matplotlib.pyplot as plt
 import scipy
+from scipy.signal import correlate
+
+import numba
+from numba import jit
 
 import skimage
 from skimage.transform import warp_polar
@@ -16,7 +20,6 @@ from pyCTF.utils import make_scalebar
 from pyCTF.utils import composite_image
 
 from pyCTF.profile import Profile
-
 
 def astig_magnitude( ElectronImage, defocus_guess, **kwargs ):
     '''
@@ -148,7 +151,8 @@ class Astig( LineProfiles ):
     For a mathematical description of astigmatism, see the literautre.
     '''
 
-
+    
+    # Numba JIT cannot determine type for "Electron Image"
     def measure_angle( ElectronImage ):
         '''
         Returns angle of astigmatism.
@@ -161,11 +165,10 @@ class Astig( LineProfiles ):
         cross-correlation using twofoldAstigmatism.correlate_angle(). 
         '''
 
-        #from skimage. transform import warp_polar
-        #from skimage.filters import gaussian
-        ElectronImage.polar = warp_polar( ElectronImage.image,
-            ( ElectronImage.centX,ElectronImage.centY ),
+        ElectronImage.polar = warp_polar( ElectronImage.image,\
+            ( ElectronImage.centX,ElectronImage.centY ),\
             radius = ElectronImage.length/2 )
+
         # Apply Gaussian blur.
         ElectronImage.polar = gaussian( ElectronImage.polar, sigma=1.5 )
         ElectronImage.polar = ElectronImage.polar[ :, 40:350 ]
@@ -177,6 +180,7 @@ class Astig( LineProfiles ):
             print( 'Found angle (degrees): ' + str(self.amax) )
         if ( ElectronImage.amax >= 180 ):
             ElectronImage.amax = ElectronImage.amax - 180
+
         ElectronImage.amin = ElectronImage.amax - 90
         if ( ElectronImage.amin < 0 ):
             ElectronImage.amin = ElectronImage.amax + 90
@@ -196,16 +200,25 @@ class Astig( LineProfiles ):
         it's mirror image, then uses numpy.where() to find the maximum and minima 
         of the cross-correlation.
         '''
-        from scipy.signal import correlate
-        output = correlate( ElectronImage.polar,
-            np.flip( ElectronImage.polar, 0 ),
+        output = correlate( ElectronImage.polar,\
+            np.flip( ElectronImage.polar, 0 ),\
             mode='same' )
-        maximum = np.where( output == output.max() )
-        minimum = np.where( output == output.min() )
-        angle = maximum[0]*(np.size( ElectronImage.polar[1] ) / 360 )
+        angle, output, maximum, minimum = Astig._get_correlation( output,\
+                                                                ElectronImage.polar )
         return angle, output, maximum, minimum
 
 
+    @jit
+    def _get_correlation( output, image ):
+        # Split into seperate function as Scipy correlate not
+        # working well with Numba.
+        maximum = np.where( output == output.max() )
+        minimum = np.where( output == output.min() )
+        angle = maximum[0]*(np.size( image[1] ) / 360 )
+        return angle, output, maximum, minimum
+
+
+    @jit
     def calc_angles( ElectronImage ):
         '''
         Calculate values to draw lines on an image.
@@ -225,6 +238,7 @@ class Astig( LineProfiles ):
         return x1[0], y1[0], x2[0], y2[0]
 
 
+    #@jit
     ### methods to find astigmatism magnitude with cross-correlation
     def __make_data( slices, a, b, simCTF, radius ):
         '''
@@ -275,6 +289,7 @@ class Astig( LineProfiles ):
         return polar
     
 
+    @jit
     # See CTFFIND4 paper for method used here.
     def __magnitude_correlate( warped, polar ):
         '''
@@ -307,6 +322,7 @@ class Astig( LineProfiles ):
         return val
     
 
+    @jit
     def magnitude_measure( image, slices, max_val, CTF2D, **kwargs ):
         '''
         Wrapper to measure magnitude of astigmatism.
@@ -360,6 +376,7 @@ class Astig( LineProfiles ):
         return vals, a, polar_list
 
 
+    @jit
     # Other methods.
     def __find_astig_defocus( vals, a ):
         '''

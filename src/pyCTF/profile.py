@@ -1,5 +1,8 @@
 import numpy as np
 
+import numba
+from numba import jit
+
 import scipy
 from scipy.signal import savgol_filter
 from scipy.signal import find_peaks
@@ -38,6 +41,7 @@ class Profile:
         return
 
 
+    @jit#(debug=True)
     def radial_profile( data, centX, centY ):
         '''
         Create radial profile of 2D array.
@@ -65,16 +69,18 @@ class Profile:
         If used with iradius generated from a 2D array, the output is
         the frequency for the intensity radial profile. 
         '''
-        y, x = np.indices(( data.shape ))
-        r = np.sqrt((x - centX)**2 + (y - centY)**2)
-        r = r.astype(int)
-        tbin = np.bincount(r.ravel(), data.ravel())
-        nr = np.bincount(r.ravel())
+        y, x = np.indices( data.shape )
+        r = np.sqrt( np.square(x - centX) + np.square(y - centY) )
+        # np.int64 here rather than int so Numba works.
+        r = r.astype( np.int64 )
+        tbin = np.bincount( r.ravel(), data.ravel() )
+        nr = np.bincount( r.ravel() )
         radialprofile = tbin / nr
-        bins = len(nr)
+        bins = np.size( nr )
         return radialprofile, bins
 
 
+    @jit
     def crop_frequency( data, freq, f_limits ):
         '''
         Crop profile to a range.
