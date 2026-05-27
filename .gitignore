@@ -3,3 +3,4 @@ test.py
 assets/
 backup/
 pyCTF/src/pyCTF.egg-info/
+pyCTF/src/pyCTF/__pycache__/
