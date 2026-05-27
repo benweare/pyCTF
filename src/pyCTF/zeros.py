@@ -53,7 +53,7 @@ class Zeros:
         return
 
 
-    @jit(nopython=True)
+    @jit
     def fit_gradient( x_min, y_min, lamb ):
         '''
         Fit gradient for spherical aberration.
@@ -81,7 +81,7 @@ class Zeros:
         return intercept, slope, Cs, defocus
     
 
-    @jit(nopython=True)
+    @jit
     def calc_zeros( data ):
         '''
         Find maxima and minima of array.
@@ -104,7 +104,7 @@ class Zeros:
         return minima, maxima
 
 
-    @jit(nopython=True)
+    @jit
     def filter_zeros( minima, prof, freq, xlim, ylim ):
         '''
         Filter data by passed limts. 
@@ -180,6 +180,7 @@ class Zeros:
         return indicies_min, x_min, y_min
 
 
+    # Note: add more robust way to generate the indicies.
     def indicies( length, **kwargs ):
         '''
         Indicies for CTF minima.
