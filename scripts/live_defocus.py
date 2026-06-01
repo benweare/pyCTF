@@ -7,6 +7,8 @@ DigitalMicrograph
 For use with DM, do make sure use numpy 1.23.5 and do not update.
 
 Using dev branch with Numba and JIT.
+
+ctrol+shift+q to kill script on background thread
 '''
 
 # Run on background thread, and refresh like every second?
@@ -17,8 +19,8 @@ import sys
 import time
 
 # Required as per DM-Script manual.
-sys.argv.extend(['-a', ' '])
-import matplotlib.pyplot as plt
+#sys.argv.extend(['-a', ' '])
+#import matplotlib.pyplot as plt
 
 import DigitalMicrograph as DM
 
@@ -44,7 +46,7 @@ def _np_array_to_dm_image( input_array, **kwargs ):
     return dm_image
 
 
-def _process_image( image ):
+def _process_image( image, fft, prof ):
     # Get front image and extract numpy array.
     array = image.GetNumArray()
     
@@ -59,29 +61,42 @@ def _process_image( image ):
     return fft, prof
 
 def _update_display( dm_fft, dm_prof ):
-    array = dm_fft.GetNumArray()
-    array = array * 0
-    imgDoc = dm_fft.# get the image document, delete the old image, add the new one?
+    #array = dm_fft.GetNumArray()
+    #array = array * 0
+    #imgDoc = dm_fft.# get the image document, delete the old image, add the new one?
     return
 
 def main_loop():
     front_image = DM.GetFrontImage()
-    
-    fft, prof = _process_image( front_image )
+    fft = None
+    prof = None
+    fft, prof = _process_image( front_image, fft, prof )
     dm_fft = _np_array_to_dm_image( fft, title='FFT' )
     dm_prof = _np_array_to_dm_image( prof, title='RadialProfile' )
     dm_fft.ShowImage()
     dm_prof.ShowImage()
-    _update_display( dm_fft, dm_prof )
+    # Get object reference for numopy array (DM is silly).
+    fft = dm_fft.GetNumArray()
+    prof = dm_prof.GetNumArray()
+    for n in np.linspace( 0, 10, 10 ):
+        print(n)
+        fft[:, :], prof[:] = _process_image( front_image, fft, prof )
+        dm_fft.UpdateImage()
+        dm_prof.UpdateImage()
+        _update_display( dm_fft, dm_prof )
+        time.sleep(1)
+    return
+
+def _destructor():
+    # Function to close thread and delete all variables when script ends.
     return
 
 # Script starts here.
 # Check on the main thread for using matplotlib in DM.
-if ( DM.IsScriptOnMainThread() == False ):
-    print( 'MatplotLib scripts are required to be run on the main thread.' )
-    exit()
+#if ( DM.IsScriptOnMainThread() == False ):
+#    print( 'MatplotLib scripts are required to be run on the main thread.' )
+#    exit()
 
 main_loop()
 
-# End of script.
 # End of script.
