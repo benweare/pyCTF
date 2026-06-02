@@ -1,7 +1,7 @@
 '''
-Live defocus measurement.
+Defocus measurement.
 
-A script to measure the defocus live on the 2100F, using PyCTF in 
+A script to measure the defocus on the 2100F, using PyCTF in 
 DigitalMicrograph
 
 For use with DM, do make sure use numpy 1.23.5 and do not update.
@@ -75,20 +75,17 @@ def main_loop():
     dm_prof = _np_array_to_dm_image( prof, title='RadialProfile' )
     dm_fft.ShowImage()
     dm_prof.ShowImage()
-    # Get object reference for numopy array (DM is silly).
+    # Get object reference for numpy array (DM is silly).
     fft = dm_fft.GetNumArray()
     prof = dm_prof.GetNumArray()
-    for n in np.linspace( 0, 10, 10 ):
-        print(n)
-        fft[:, :], prof[:] = _process_image( front_image, fft, prof )
-        dm_fft.UpdateImage()
-        dm_prof.UpdateImage()
-        _update_display( dm_fft, dm_prof )
-        time.sleep(1)
+    # Do the defocus measurement.
+    _destructor()
     return
 
 def _destructor():
     # Function to close thread and delete all variables when script ends.
+    del( fft )
+    del( prof )
     return
 
 # Script starts here.
