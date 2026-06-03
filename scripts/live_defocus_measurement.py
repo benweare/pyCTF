@@ -9,6 +9,8 @@ For use with DM, do make sure use numpy 1.23.5 and do not update.
 Using dev branch with Numba and JIT.
 
 ctrol+shift+q to kill scripts running on background thread
+
+Note: currently scales poorly as FFT-intensive.
 '''
 
 import numpy as np
@@ -52,11 +54,11 @@ class imageListener( DM.Py_ScriptObject ):
             self.data = self.imgref.GetNumArray()[int(val):int(val3),int(val2):int(val4)]
             #get the shape and calibration of the original image
             (input_sizex, input_sizey) = self.data.shape
-            #origin, x_scale, scale_unit =  self.imgref.GetDimensionCalibration(1, 0)
-            #if scale_unit == b'\xb5m': scale_unit = 'um' #scale unit of microns causes problems for python in DM
+            origin, x_scale, scale_unit =  self.imgref.GetDimensionCalibration(1, 0)
+            if scale_unit == b'\xb5m': scale_unit = 'um' #scale unit of microns causes problems for python in DM
             
             #Create a new image to contain the results of processing.
-            self.result_image = DM.CreateImage(self.ROI_process(self.data))
+            self.result_image = DM.CreateImage( self.data.copy() )
             #Set the calibration based on the original data
             self.result_image.SetDimensionCalibration(0,origin,x_scale,scale_unit,0)
             self.result_image.SetDimensionCalibration(1,origin,x_scale,scale_unit,0)
@@ -68,14 +70,16 @@ class imageListener( DM.Py_ScriptObject ):
             self.result_data=self.result_image.GetNumArray()
             
             # CTF variables - causing some issue with the PyScriptObject class?
-            fft, prof = self._process_image( self.result_data )
-            # is it this part?
-            self.dm_fft = self._np_array_to_dm_image( fft, title='FFT' )
-            self.dm_prof = self._np_array_to_dm_image( prof, title='RadialProfile' )
+            self.fft = Fourier.imfft( self.data )
+            self.fft = Fourier.log_mod( self.fft )
+            self.fft, _, _ = Fourier.remove_bckg( self.fft, 8, 10 )
+            self.dm_fft = self._np_array_to_dm_image( self.fft, title='FFT' )
+            self.fft = self.dm_fft.GetNumArray()
+            self.dm_fft.ShowImage()
             
-            # Get reference for np arrays.
-            self.fft = dm_fft.GetNumArray()
-            self.prof = dm_prof.GetNumArray()
+            self.prof, _ = Profile.radial_profile( self.fft.copy(), len(self.fft[0])/2, len(self.fft[0])/2 )
+            self.dm_prof = self._np_array_to_dm_image( self.prof, title='RadialProfile' )
+            self.prof = self.dm_prof.GetNumArray()
             
             # Show images.
             self.result_image.ShowImage()
@@ -115,16 +119,14 @@ class imageListener( DM.Py_ScriptObject ):
             roi.SetResizable(False)
             id = roi.GetID()
         return id
-        
-        
+    
+    
         # Function run each time updates.
     def ROI_process(self, image_data):
         '''
         Function to be called every time data is updated.
         '''
-        image_data.copy()
-        fft, prof = self._process_data( image_data )
-        return image_data, fft, prof
+        return
     
     
     def _np_array_to_dm_image( self, input_array, **kwargs ):
@@ -134,15 +136,6 @@ class imageListener( DM.Py_ScriptObject ):
             dm_image.SetName( title )
         return dm_image
     
-    
-def _process_image( self, array ):
-    # Fourier transform, subtract background.
-    fft = Fourier.imfft( array )
-    fft = Fourier.log_mod(fft)
-    fft, _, _ = Fourier.remove_bckg( fft, 8, 10 )
-    # Line profile.
-    prof, _ = Profile.radial_profile( fft, len(fft[0])/2, len(fft[0])/2 )
-    return fft, prof
     
     
     def HandleDataChangedEvent(self, flags, image):
@@ -158,12 +151,19 @@ def _process_image( self, array ):
                 self.data = self.imgref.GetNumArray()[int(val):int(val3),int(val2):int(val4)]
                 
                 #Process the data and place in the result arrays.
-                self.result_data[:], self.fft[:], self.prof[:] = self.ROI_process( self.data )
+                self.result_data[:, :] = self.data.copy()# = self.ROI_process( self.data )
+                
+                self.fft[:] = Fourier.imfft( self.data.copy() )
+                self.fft[:] = Fourier.log_mod( self.fft.copy() )
+                self.fft[:], _, _ = Fourier.remove_bckg( self.fft.copy(), 8, 10 )
+                
+                self.prof[:], _ = Profile.radial_profile( self.result_data.copy(), len(self.fft[0])/2, len(self.fft[0])/2 )
                 
                 #Update the image displays.
                 self.result_image.UpdateImage()
                 self.dm_fft.UpdateImage()
                 self.dm_prof.UpdateImage()
+                #print('/rprocessed frames:' + str(self.i) )
                 
                 #Increment an index each time data is processed.
                 self.i = self.i+1
@@ -225,4 +225,5 @@ listener = imageListener( front_image )
 WindowClosedListenerID = listener.WindowHandleWindowClosedEvent(im_doc_win, 'pythonplugin')
 ROIRemovedListenerID = listener.ImageDisplayHandleROIRemovedEvent(image_display,'pythonplugin')
 DataChangedListenerID = listener.ImageHandleDataChangedEvent(front_image, 'pythonplugin')
+
 # End of script.
