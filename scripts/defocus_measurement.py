@@ -18,10 +18,6 @@ import numpy as np
 import sys
 import time
 
-# Required as per DM-Script manual.
-#sys.argv.extend(['-a', ' '])
-#import matplotlib.pyplot as plt
-
 import DigitalMicrograph as DM
 
 import pyCTF
@@ -36,6 +32,7 @@ def _plot( fig, ax, x, y ):
     fig, ax = plt.subplots()
     ax.plot( x, y )
     return fig, ax
+
 
 # from export_insitu module
 def _np_array_to_dm_image( input_array, **kwargs ):
@@ -60,39 +57,44 @@ def _process_image( image, fft, prof ):
     
     return fft, prof
 
-def _update_display( dm_fft, dm_prof ):
-    #array = dm_fft.GetNumArray()
-    #array = array * 0
-    #imgDoc = dm_fft.# get the image document, delete the old image, add the new one?
-    return
 
 def main_loop():
+    # Get front image.
     front_image = DM.GetFrontImage()
-    fft = None
-    prof = None
-    fft, prof = _process_image( front_image, fft, prof )
-    dm_fft = _np_array_to_dm_image( fft, title='FFT' )
-    dm_prof = _np_array_to_dm_image( prof, title='RadialProfile' )
-    dm_fft.ShowImage()
-    dm_prof.ShowImage()
-    # Get object reference for numpy array (DM is silly).
-    fft = dm_fft.GetNumArray()
-    prof = dm_prof.GetNumArray()
+    
+    kv = 200
+    scale = 1.0
+    
+    # 
+    result_image = _np_array_to_dm_image( data, 'Processed image' )
+    data = front_image.GetNumArray()
+    
+    # Init CTF object.
+    # Linked to result_image via np array.
+    ctf = import_ctf( data.copy(), kv, scale )
+    ctf.image = Fourier.imfft( ctf.image )
+    ctf.image = Fourier.logmod( ctf.image )
+    ctf.remove_background( 10, 10 )
+    
     # Do the defocus measurement.
-    _destructor()
+    ctf.measure_defocus()
+    
+    profile = _np_array_to_dm_image( ctf.smoothed_profile, 'Profile' )
+    
+    # Show all the images.
+    result_image.ShowImage()
+    result_image.UpdateImage()
+    
+    profile.ShowImage()
+    profile.UpdateImage()
+    
+    # Remove variables.
+    del( ctf )
+    del( data )
     return
 
-def _destructor():
-    # Function to close thread and delete all variables when script ends.
-    del( fft )
-    del( prof )
-    return
 
 # Script starts here.
-# Check on the main thread for using matplotlib in DM.
-#if ( DM.IsScriptOnMainThread() == False ):
-#    print( 'MatplotLib scripts are required to be run on the main thread.' )
-#    exit()
 
 main_loop()
 
