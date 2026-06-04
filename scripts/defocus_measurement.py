@@ -25,8 +25,9 @@ from pyCTF.image import import_ctf
 
 from pyCTF.fourier import Fourier
 
-from pyCTF.utils import fit, calc_cs_and_defocus
 
+from numba import jit, config
+config.DISABLE_JIT = False
 
 # Define functions.
 
@@ -103,7 +104,7 @@ def main_loop( front_image ):
     # Do the defocus measurement.
     #measure_defocus( ctf, f_limits=[0,ctf.max_freq_inscribed] )
     #ctf.get_profiles( f_limits=[0,ctf.max_freq_inscribed], polynomial = 5 )
-    _measure_defocus( ctf )
+    #_measure_defocus( ctf )
     
     print('\nFinished.')
     
