@@ -423,7 +423,7 @@ def measure_defocus( ElectronImage, **kwargs ):
     '''
     polynomial = kwargs.get( 'polynomial', 20 )
     window = kwargs.get( 'window', 1 )
-    f_limits = kwargs.get( 'f_limits', [0.0, 5.0] )
+    f_limits = kwargs.get( 'f_limits', [0.0, ElectronImage.max_freq_inscribed] )
     xlim = kwargs.get( 'xlim', [0.0, ElectronImage.max_freq_inscribed] )
     ylim = kwargs.get( 'ylim', [-1.0, 1.0] )
     start = kwargs.get( 'start', 2 )
