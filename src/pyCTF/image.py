@@ -210,11 +210,12 @@ class ElectronImage:
 
     def get_profiles( self, **kwargs ):
         '''
-        Wrapper around __process_profile that is more convient to use.
+        Wrapper around _process_profile that is more convienient to use.
         '''
         f_limits = kwargs.get( 'f_limits', [0, ElectronImage.max_freq_inscribed] )
         polynomial = kwargs.get( 'polynomial', 20 )
         window = kwargs.get( 'window', 1 )
+        
         self.radial_profile,\
         self.frequency,\
         self.baseline,\
@@ -224,6 +225,25 @@ class ElectronImage:
                                                     f_limits=f_limits,
                                                     polynomial=polynomial,
                                                     window=window)
+        return
+
+
+    # TO DO:
+    def get_zeros( self, **kwargs ):
+        '''
+        Wrapper around _find_zeros() that is more convienient to use.
+        '''
+        xlim = kwargs.get( 'xlim', [0.0, ElectronImage.max_freq_inscribed] )
+        ylim = kwargs.get( 'ylim', [-1.0, 1.0] )
+        start = kwargs.get( 'start', 2 )
+        underfocus = kwargs.get( 'underfocus', True )
+
+        self.indicies_min,\
+        self.y_min,\
+        self.x_min,\
+        self.minima,\
+        self.maxima = \
+        _find_zeros( ctf, xlim=xlim, ylim=ylim, start=start, underfocus=underfocus )
         return
 
 
@@ -345,10 +365,10 @@ def _find_zeros( ElectronImage, **kwargs):
     minima, maxima = Zeros.calc_zeros( sprof )
 
     try:
-        minima = Zeros.filter_zeros( minima, 
-                                     sprof, 
-                                     cfreq, 
-                                     x_lim, 
+        minima = Zeros.filter_zeros( minima,
+                                     sprof,
+                                     cfreq,
+                                     x_lim,
                                      y_lim )
     except:
         message = 'Error: CTF minima not filtered.'
@@ -361,8 +381,8 @@ def _find_zeros( ElectronImage, **kwargs):
         return
     indicies_min, x_min, y_min = Zeros.calc_indicies( minima, sprof,\
         cfreq, start=start, underfocus=underfocus)
-    results, Cs, defocus = Zeros.fit( x_min, y_min, ElectronImage.lamb )
-    return indicies_min, y_min, x_min, results, Cs, defocus, minima, maxima
+    #results, Cs, defocus = Zeros.fit( x_min, y_min, ElectronImage.lamb )
+    return indicies_min, y_min, x_min minima, maxima
 
 
 def print_Cs_results( ElectronImage, **kwargs ):
@@ -419,7 +439,8 @@ def measure_defocus( ElectronImage, **kwargs ):
     Notes
     -----
     Wrapper to streamline the process of measuring defocus in a CTF, using 
-    standard values. 
+    standard values.
+    Uses lmfit to do linear fitting.
     '''
     polynomial = kwargs.get( 'polynomial', 20 )
     window = kwargs.get( 'window', 1 )
@@ -428,6 +449,7 @@ def measure_defocus( ElectronImage, **kwargs ):
     ylim = kwargs.get( 'ylim', [-1.0, 1.0] )
     start = kwargs.get( 'start', 2 )
     underfocus = kwargs.get( 'underfocus', True )
+
     ElectronImage.radial_profile,\
     ElectronImage.frequency,\
     ElectronImage.baseline,\
@@ -436,16 +458,17 @@ def measure_defocus( ElectronImage, **kwargs ):
     ElectronImage.cropped_frequency = \
     _process_profile( ElectronImage, f_limits=f_limits, polynomial=polynomial,\
         window=window )
+
     ElectronImage.indicies_min,\
     ElectronImage.y_min,\
     ElectronImage.x_min,\
-    ElectronImage.results,\
-    ElectronImage.Cs,\
-    ElectronImage.defocus,\
     ElectronImage.minima,\
     ElectronImage.maxima = \
-    _find_zeros( ElectronImage, xlim=xlim,ylim=ylim,start=start,\
-        underfocus=underfocus )
+    _find_zeros( ElectronImage, xlim=xlim,ylim=ylim,start=start,underfocus=underfocus )
+
+    ElectronImage.results,\
+    ElectronImage.Cs,\
+    ElectronImage.defocus,\ = Zeros.fit( ElectronImage.x_min, ElectronImage.y_min, ElectronImage.lamb )
     return
 
 

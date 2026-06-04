@@ -12,6 +12,7 @@ from numba import jit
 
 import pyCTF.utils
 from pyCTF.utils import gradient_simple
+from pyCTF.utils import _calc_Cs_and_defocus
 
 
 class indicieError( Exception ):
@@ -54,9 +55,9 @@ class Zeros:
 
 
     @jit
-    def fit_gradient( x_min, y_min, lamb ):
+    def fit_numpy( x_min, y_min, lamb ):
         '''
-        Fit gradient for spherical aberration.
+        Fit gradient for spherical aberration using Numpy.
 
         Parameters
         ----------
@@ -70,15 +71,23 @@ class Zeros:
         slope : float
         Cs : float
         defocus : float
+
+        Notes
+        -----
+        Alternative to zeros.fit() method for applications where lmfit is not
+        suitable.
         '''
         from numpy.polynomial import polynomial as P
         [intercept, slope] = P.polyfit(x_min, y_min, 1, full=False )
         # covariance
         cov = np.sqrt( np.diagonal( np.cov( x_min, y_min )))
         ## Cs and defocus
-        Cs = slope / ( lamb**3 )
-        defocus = -intercept /( -2 * lamb )
+        #Cs = slope / ( lamb**3 )
+        #defocus = -intercept /( -2 * lamb )
+        Cs, defocus = _calc_Cs_and_defocus( slope, intercept, lamb )
         return intercept, slope, Cs, defocus
+
+
     
 
     @jit
@@ -286,8 +295,8 @@ class Zeros:
         params['c'].value = 0.0
         params['c'].vary = True
         results = model.fit( y_min, params, x = x_min )
-        Cs = ( 2* results.params['m'].value /( ( lamb )**3)) * 1e-33 # check units conversion
-        defocus = (results.params['c'].value/( lamb )) *1e-9 # check units conversion
+        Cs = ( 2* results.params['m'].value /( ( lamb )**3)) * 1e-33 # TO DO: check units conversion
+        defocus = (results.params['c'].value/( lamb )) *1e-9 # TO DO: check units conversion
         return results, Cs, defocus
     
 

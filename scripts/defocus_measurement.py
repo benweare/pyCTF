@@ -22,10 +22,10 @@ import DigitalMicrograph as DM
 import pyCTF
 from pyCTF.image import ElectronImage
 from pyCTF.image import import_ctf
-from pyCTF.image import measure_defocus
 
 from pyCTF.fourier import Fourier
-from pyCTF.profile import Profile
+
+from pyCTF.utils import fit, calc_cs_and_defocus
 
 
 # Define functions.
@@ -43,6 +43,18 @@ def _np_array_to_dm_image( input_array, **kwargs ):
 def _calc_scale( image, scale ):
     iscale = 1/( len(image[0]) * scale )
     return iscale
+
+
+# Function to handle measuring the defocus using ctf object.
+def _measure_defocus( ctf ):
+    # Get radial profiles.
+    ctf.get_profiles( f_limits=[0,ctf.max_freq_inscribed], polynomial = 5 )
+    # Get zeros.
+    ctf.get_zeros()
+    # Fit Cs and defocus using numpy method.
+    m, c, cov = pyCTF.utils.fit( ctf.x_min, ctf.y_min, ctf.lamb )
+    ctf.Cs, ctf.defocus = pyCTF.utils.calc_cs_and_defocus( m, c, ctf.lamb )
+    return
 
 
 # TO DO: add units to output FFT DM image.
@@ -90,7 +102,8 @@ def main_loop( front_image ):
     
     # Do the defocus measurement.
     #measure_defocus( ctf, f_limits=[0,ctf.max_freq_inscribed] )
-    ctf.get_profiles( f_limits=[0,ctf.max_freq_inscribed], polynomial = 5 )
+    #ctf.get_profiles( f_limits=[0,ctf.max_freq_inscribed], polynomial = 5 )
+    _measure_defocus( ctf )
     
     print('\nFinished.')
     

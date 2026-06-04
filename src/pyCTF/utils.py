@@ -301,6 +301,44 @@ def find_iradius_itheta( image, scale ):
 def bin():
     return
 
+
+@jit
+def fit( x_min, y_min, lamb ):
+    '''
+    Fit gradient for spherical aberration using Numpy.
+
+    Parameters
+    ----------
+    x_min : array
+    y_min : array
+    lamb : float
+
+    Returns
+    -------
+    intercept : float
+    slope : float
+    Cs : float
+    defocus : float
+
+    Notes
+    -----
+    Redundant with zeros.fit_numpy(), but does not calculate Cs or defocus.
+    '''
+    from numpy.polynomial import polynomial as P
+    [intercept, slope] = P.polyfit(x_min, y_min, 1, full=False )
+    # covariance
+    cov = np.sqrt( np.diagonal( np.cov( x_min, y_min )))
+    return slope, intercept, cov
+
+
+# Calculate the Cs and defocus from the gradient and y-intercept.
+# TO DO: move to utils.
+def calc_cs_and_defocus( m, c, lamb ):
+    Cs = slope / ( lamb**3 )
+    defocus = -intercept /( -2 * lamb )
+    return Cs, defocus
+
+
 # line profiles
 class LineProfiles:
     '''
