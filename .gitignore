@@ -4,3 +4,4 @@ assets/
 backup/
 pyCTF/src/pyCTF.egg-info/
 scripts/*.dm4
+src/pyCTF/__pycache__/
