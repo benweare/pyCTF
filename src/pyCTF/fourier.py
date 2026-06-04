@@ -67,6 +67,12 @@ class Fourier:
         from numpy.fft import fftshift
         return
 
+    # Calculate the scale of the Fourier transform from the input image scale and size.
+    def _calc_scale( image, scale ):
+        iscale = 1/( len(image[0]) * scale )
+        return iscale
+        
+
     @jit(debug=True)
     def imfft( image ):
         '''
