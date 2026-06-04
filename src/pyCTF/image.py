@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 
 import scipy
 
+#from pyCTF import utils
 from pyCTF.utils import LineProfiles
 from pyCTF.utils import ZerosData
 from pyCTF.utils import LensAberrations
@@ -227,8 +228,6 @@ class ElectronImage:
                                                     window=window)
         return
 
-
-    # TO DO:
     def get_zeros( self, **kwargs ):
         '''
         Wrapper around _find_zeros() that is more convienient to use.
@@ -245,7 +244,7 @@ class ElectronImage:
         self.maxima = \
         _find_zeros( ctf, xlim=xlim, ylim=ylim, start=start, underfocus=underfocus )
         return
-
+    
 
     def plot_profiles( self ):
         '''
@@ -365,10 +364,10 @@ def _find_zeros( ElectronImage, **kwargs):
     minima, maxima = Zeros.calc_zeros( sprof )
 
     try:
-        minima = Zeros.filter_zeros( minima,
-                                     sprof,
-                                     cfreq,
-                                     x_lim,
+        minima = Zeros.filter_zeros( minima,\
+                                     sprof,\
+                                     cfreq,\
+                                     x_lim,\
                                      y_lim )
     except:
         message = 'Error: CTF minima not filtered.'
@@ -379,10 +378,9 @@ def _find_zeros( ElectronImage, **kwargs):
         message = 'Error: all minima filtered. Try checking radial profile?'
         raise filterError( message )
         return
-    indicies_min, x_min, y_min = Zeros.calc_indicies( minima, sprof,\
-        cfreq, start=start, underfocus=underfocus)
+    indicies_min, x_min, y_min = Zeros.calc_indicies( minima, sprof, cfreq, start=start, underfocus=underfocus)
     #results, Cs, defocus = Zeros.fit( x_min, y_min, ElectronImage.lamb )
-    return indicies_min, y_min, x_min minima, maxima
+    return indicies_min, y_min, x_min, minima, maxima
 
 
 def print_Cs_results( ElectronImage, **kwargs ):
@@ -396,7 +394,6 @@ def print_Cs_results( ElectronImage, **kwargs ):
                         ElectronImage.cropped_frequency,
                         (ElectronImage.cropped_profile-ElectronImage.baseline),
                         ElectronImage.indicies_min)
-    
     if (verbose == True):
         Zeros.print_results( ElectronImage,
                             ElectronImage.polynomial,
@@ -468,7 +465,7 @@ def measure_defocus( ElectronImage, **kwargs ):
 
     ElectronImage.results,\
     ElectronImage.Cs,\
-    ElectronImage.defocus,\ = Zeros.fit( ElectronImage.x_min, ElectronImage.y_min, ElectronImage.lamb )
+    ElectronImage.defocus = Zeros.fit( ElectronImage.x_min, ElectronImage.y_min, ElectronImage.lamb )
     return
 
 

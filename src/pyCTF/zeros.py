@@ -12,7 +12,7 @@ from numba import jit
 
 import pyCTF.utils
 from pyCTF.utils import gradient_simple
-from pyCTF.utils import _calc_Cs_and_defocus
+from pyCTF.utils import calc_cs_and_defocus
 
 
 class indicieError( Exception ):
@@ -84,7 +84,7 @@ class Zeros:
         ## Cs and defocus
         #Cs = slope / ( lamb**3 )
         #defocus = -intercept /( -2 * lamb )
-        Cs, defocus = _calc_Cs_and_defocus( slope, intercept, lamb )
+        Cs, defocus = calc_cs_and_defocus( slope, intercept, lamb )
         return intercept, slope, Cs, defocus
 
 
