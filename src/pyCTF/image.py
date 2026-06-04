@@ -212,7 +212,7 @@ class ElectronImage:
         '''
         Wrapper around __process_profile that is more convient to use.
         '''
-        f_limits = kwargs.get( 'f_limits', [0, 5.0] )
+        f_limits = kwargs.get( 'f_limits', [0, ElectronImage.max_freq_inscribed] )
         polynomial = kwargs.get( 'polynomial', 20 )
         window = kwargs.get( 'window', 1 )
         self.radial_profile,\
@@ -285,7 +285,7 @@ class ElectronImage:
 
 # Extract and process the radial profile of the CTF.
 def _process_profile( ElectronImage, **kwargs ):
-    f_limits = kwargs.get( 'f_limits', [0, 5.0] )
+    f_limits = kwargs.get( 'f_limits', [0, ElectronImage.max_freq_inscribed] )
     polynomial = kwargs.get( 'polynomial', 20 )
     window = kwargs.get( 'window', 1 )
     # kwargs to allow astigmatism defocus measurement
