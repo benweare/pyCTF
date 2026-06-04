@@ -6,7 +6,7 @@ A script to measure the defocus from TEM images.
 
 Author: E Weare
 Location: nmRC
-Contact: benjamin.weare1(at)nottingham.ac.uk-nospam
+Contact: benjamin.weare1@nottingham.ac.uk-n0spam
 
 Notes
 -----
@@ -27,7 +27,7 @@ from pyCTF.fourier import Fourier
 
 
 from numba import jit, config
-config.DISABLE_JIT = False
+config.DISABLE_JIT = True
 
 # Define functions.
 
@@ -102,9 +102,7 @@ def main_loop( front_image ):
     ctf.remove_background( 5, 5 )
     
     # Do the defocus measurement.
-    #measure_defocus( ctf, f_limits=[0,ctf.max_freq_inscribed] )
-    #ctf.get_profiles( f_limits=[0,ctf.max_freq_inscribed], polynomial = 5 )
-    #_measure_defocus( ctf )
+    _measure_defocus( ctf )
     
     print('\nFinished.')
     
