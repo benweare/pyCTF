@@ -1,40 +1,37 @@
 '''
-Defocus measurement.
 
-A script to measure the defocus on the 2100F, using PyCTF in 
-DigitalMicrograph
+Defocus measurement script.
 
-For use with DM, do make sure use numpy 1.23.5 and do not update.
+A script to measure the defocus from TEM images.
 
-Using dev branch with Numba and JIT.
+Author: E Weare
+Location: nmRC
+Contact: benjamin.weare1(at)nottingham.ac.uk-nospam
 
-ctrol+shift+q to kill script on background thread
+Notes
+-----
+For compatibility with DigitalMicrograph, use numpy v1.23.5
+
 '''
 
-# Run on background thread, and refresh like every second?
-# Use a thread to do the live FFT stuff, and a thread to display the results?
 
 import numpy as np
-import sys
-import time
 
 import DigitalMicrograph as DM
 
 import pyCTF
 from pyCTF.image import ElectronImage
 from pyCTF.image import import_ctf
+from pyCTF.image import measure_defocus
+
 from pyCTF.fourier import Fourier
 from pyCTF.profile import Profile
 
 
 # Define functions.
-def _plot( fig, ax, x, y ):
-    fig, ax = plt.subplots()
-    ax.plot( x, y )
-    return fig, ax
 
-
-# from export_insitu module
+# From GiveMeED export_insitu module.
+# Wrapper for to make DM images from np array.
 def _np_array_to_dm_image( input_array, **kwargs ):
     title = kwargs.get('title', None)
     dm_image = DM.CreateImage( input_array )
@@ -43,59 +40,76 @@ def _np_array_to_dm_image( input_array, **kwargs ):
     return dm_image
 
 
-def _process_image( image, fft, prof ):
-    # Get front image and extract numpy array.
-    array = image.GetNumArray()
-    
-    # Fourier transform, subtract background.
-    fft = Fourier.imfft( array )
-    fft = Fourier.log_mod(fft)
-    fft, _, _ = Fourier.remove_bckg( fft, 8, 10 )
-    
-    # Line profile.
-    prof, _ = Profile.radial_profile( fft, len(fft[0])/2, len(fft[0])/2 )
-    
-    return fft, prof
+def _calc_scale( image, scale ):
+    iscale = 1/( len(image[0]) * scale )
+    return iscale
 
 
-def main_loop():
+# TO DO: add units to output FFT DM image.
+def main_loop( front_image ):
+    '''
+    Main processing function.
+    
+    Takes front image, converts to CTF, and takes radial profiles to measure
+    the defocus.
+    
+    
+    Returns
+    -------
+    ctf : object
+        pyCTF ctf object containing processed data.
+    
+    
+    Notes
+    -----
+    Uses pyCTF module for data processing, and DM module for interacting
+    with DigitalMicrograph images.
+    '''
+    
+    print('\nStarting.')
     # Get front image.
-    front_image = DM.GetFrontImage()
-    
+    origin, x_scale, scale_unit =  front_image.GetDimensionCalibration(1, 0)
     kv = 200
-    scale = 1.0
     
-    # 
-    result_image = _np_array_to_dm_image( data, 'Processed image' )
+
     data = front_image.GetNumArray()
+    # Scale of Fourier transform in 1/distance.
+    i_scale = _calc_scale( data, x_scale )
+    
     
     # Init CTF object.
     # Linked to result_image via np array.
-    ctf = import_ctf( data.copy(), kv, scale )
-    ctf.image = Fourier.imfft( ctf.image )
-    ctf.image = Fourier.logmod( ctf.image )
-    ctf.remove_background( 10, 10 )
+    
+    # Fourier transform, crop, background subtract.
+    fft = Fourier.imfft( data )
+    fft = Fourier.crop( fft, len(fft[0])/4 )
+    fft = Fourier.log_mod( fft )
+    ctf = import_ctf( fft, kv, i_scale )
+    del(fft)
+    ctf.remove_background( 5, 5 )
     
     # Do the defocus measurement.
-    ctf.measure_defocus()
+    #measure_defocus( ctf, f_limits=[0,ctf.max_freq_inscribed] )
+    ctf.get_profiles( f_limits=[0,ctf.max_freq_inscribed], polynomial = 5 )
     
-    profile = _np_array_to_dm_image( ctf.smoothed_profile, 'Profile' )
+    print('\nFinished.')
     
-    # Show all the images.
-    result_image.ShowImage()
-    result_image.UpdateImage()
-    
-    profile.ShowImage()
-    profile.UpdateImage()
-    
-    # Remove variables.
-    del( ctf )
-    del( data )
-    return
+    return ctf
 
 
 # Script starts here.
+front_image = DM.GetFrontImage()
 
-main_loop()
+ctf = main_loop( front_image )
+
+print( ctf.defocus )
+
+# Show all the images.
+result_image = _np_array_to_dm_image( ctf.image, title='Cropped FFT of ' + front_image.GetName() )
+result_image.ShowImage()
+
+sprof = _np_array_to_dm_image( ctf.smoothed_profile, title='Smoothed Radial Profile' )
+
+sprof.ShowImage()
 
 # End of script.
