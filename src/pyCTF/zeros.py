@@ -89,8 +89,6 @@ class Zeros:
 
 
     
-
-    @jit
     def calc_zeros( data ):
         '''
         Find maxima and minima of array.
