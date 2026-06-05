@@ -213,7 +213,7 @@ class ElectronImage:
         '''
         Wrapper around _process_profile that is more convienient to use.
         '''
-        f_limits = kwargs.get( 'f_limits', [0, ElectronImage.max_freq_inscribed] )
+        f_limits = kwargs.get( 'f_limits', [0, self.max_freq_inscribed] )
         polynomial = kwargs.get( 'polynomial', 20 )
         window = kwargs.get( 'window', 1 )
         
@@ -232,7 +232,7 @@ class ElectronImage:
         '''
         Wrapper around _find_zeros() that is more convienient to use.
         '''
-        xlim = kwargs.get( 'xlim', [0.0, ElectronImage.max_freq_inscribed] )
+        xlim = kwargs.get( 'xlim', [0.0, self.max_freq_inscribed] )
         ylim = kwargs.get( 'ylim', [-1.0, 1.0] )
         start = kwargs.get( 'start', 2 )
         underfocus = kwargs.get( 'underfocus', True )
