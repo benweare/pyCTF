@@ -242,7 +242,7 @@ class ElectronImage:
         self.x_min,\
         self.minima,\
         self.maxima = \
-        _find_zeros( ctf, xlim=xlim, ylim=ylim, start=start, underfocus=underfocus )
+        _find_zeros( self, xlim=xlim, ylim=ylim, start=start, underfocus=underfocus )
         return
     
 
