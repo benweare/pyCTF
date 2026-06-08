@@ -6,7 +6,7 @@ DigitalMicrograph
 
 For use with DM, do make sure use numpy 1.23.5 and do not update.
 
-Using dev branch with Numba and JIT.
+DM is not playing well with numba or jit atm.
 
 ctrol+shift+q to kill scripts running on background thread
 
@@ -30,6 +30,8 @@ from pyCTF.image import import_ctf
 from pyCTF.fourier import Fourier
 from pyCTF.profile import Profile
 
+from numba import jit, config
+config.DISABLE_JIT = False
 
 # From Ben Miller script
 class imageListener( DM.Py_ScriptObject ):
@@ -70,7 +72,9 @@ class imageListener( DM.Py_ScriptObject ):
             self.result_data=self.result_image.GetNumArray()
             
             # CTF variables - causing some issue with the PyScriptObject class?
-            self.fft = Fourier.imfft( self.data )
+            self.fft = Fourier.imfft( self.data.copy() )
+            self.temp = self.fft.copy()
+            self.fft = Fourier.crop( self.fft.copy(), len(self.fft[0])/4 )
             self.fft = Fourier.log_mod( self.fft )
             self.fft, _, _ = Fourier.remove_bckg( self.fft, 8, 10 )
             self.dm_fft = self._np_array_to_dm_image( self.fft, title='FFT' )
@@ -78,13 +82,14 @@ class imageListener( DM.Py_ScriptObject ):
             self.dm_fft.ShowImage()
             
             self.prof, _ = Profile.radial_profile( self.fft.copy(), len(self.fft[0])/2, len(self.fft[0])/2 )
-            self.dm_prof = self._np_array_to_dm_image( self.prof, title='RadialProfile' )
+            self.dm_prof = self._np_array_to_dm_image( self.prof.copy(), title='RadialProfile' )
             self.prof = self.dm_prof.GetNumArray()
             
             # Show images.
             self.result_image.ShowImage()
             self.dm_fft.ShowImage()
             self.dm_prof.ShowImage()
+            
             
             DM.Py_ScriptObject.__init__(self)
             self.stop = 0
@@ -153,11 +158,16 @@ class imageListener( DM.Py_ScriptObject ):
                 #Process the data and place in the result arrays.
                 self.result_data[:, :] = self.data.copy()# = self.ROI_process( self.data )
                 
-                self.fft[:] = Fourier.imfft( self.data.copy() )
-                self.fft[:] = Fourier.log_mod( self.fft.copy() )
-                self.fft[:], _, _ = Fourier.remove_bckg( self.fft.copy(), 8, 10 )
+                # DM doesn't play well with numba?
+                self.temp[:] = np.fft.fft2( self.data.copy() )
+                #self.fft[:] = Fourier.crop( self.temp.copy(), len(fft[0]) )
+                self.fft[:] = np.fft.fftshift( self.fft.copy() )
+                self.fft[:] = np.log( np.abs(self.fft.copy()) )
+                #self.fft[:] = Fourier.imfft( self.data.copy() )
+                #self.fft[:] = Fourier.log_mod( self.fft.copy() )
+                #self.fft[:], _, _ = Fourier.remove_bckg( self.fft.copy(), 8, 10 )
                 
-                self.prof[:], _ = Profile.radial_profile( self.result_data.copy(), len(self.fft[0])/2, len(self.fft[0])/2 )
+                self.prof[:], _ = Profile.radial_profile( self.fft.copy(), len(self.fft[0])/2, len(self.fft[0])/2 )
                 
                 #Update the image displays.
                 self.result_image.UpdateImage()
