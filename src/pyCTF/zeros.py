@@ -2,13 +2,19 @@
 A class to measure CTF zeros with contained methods.
 '''
 
+from numba import jit, config
+
+from pyCTF.__init__ import enable_jit
+if enable_jit == True:
+    config.DISABLE_JIT = True
+else:
+    config.DISABLE_JIT = False
+
 import numpy as np 
 import scipy
 from scipy.signal import find_peaks
 import matplotlib.pyplot as plt
 
-import numba
-from numba import jit
 
 import pyCTF.utils
 from pyCTF.utils import gradient_simple

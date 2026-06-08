@@ -2,13 +2,20 @@
 A class to measure twofold astigmatism in CTFs.
 '''
 
+from numba import jit, config
+
+from pyCTF.__init__ import enable_jit
+if enable_jit == True:
+    config.DISABLE_JIT = True
+else:
+    config.DISABLE_JIT = False
+
+
 import numpy as np 
 import matplotlib.pyplot as plt
 import scipy
 from scipy.signal import correlate
 
-import numba
-from numba import jit
 
 import skimage
 from skimage.transform import warp_polar

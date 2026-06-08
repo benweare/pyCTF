@@ -1,7 +1,16 @@
+'''
+Module for handling line profiles.
+'''
+
 import numpy as np
 
-import numba
-from numba import jit
+from numba import jit, config
+
+from pyCTF.__init__ import enable_jit
+if enable_jit == True:
+    config.DISABLE_JIT = True
+else:
+    config.DISABLE_JIT = False
 
 import scipy
 from scipy.signal import savgol_filter

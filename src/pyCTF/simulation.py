@@ -7,9 +7,6 @@ This module contains classes for simulating 2D and 1D CTFs.
 import numpy as np 
 import matplotlib.pyplot as plt
 
-import numba
-from numba import jit
-
 from pyCTF.utils import kv_to_lamb
 from pyCTF.utils import LensAberrations
 from pyCTF.utils import LineProfiles

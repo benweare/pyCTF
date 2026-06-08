@@ -1,7 +1,6 @@
 '''
 A class to contain contrast transfer functions (CTFs).
 '''
-
 import numpy as np
 
 import matplotlib.pyplot as plt

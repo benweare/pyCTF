@@ -2,11 +2,14 @@
 Module for Fourier-space methods.
 '''
 
-# Added numba jit to speed up, needs testing.
 # Requires rocket-fft 0.3.1 on top of numba to handle the FFTs
+from numba import jit, config
 
-import numba
-from numba import jit
+from pyCTF.__init__ import enable_jit
+if enable_jit == True:
+    config.DISABLE_JIT = True
+else:
+    config.DISABLE_JIT = False
 
 import numpy as np 
 import matplotlib.pyplot as plt

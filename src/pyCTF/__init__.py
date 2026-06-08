@@ -14,6 +14,8 @@ to determine lens aberrations, and simulation of contrast transfer functions.
 #import pyCTF.simulation
 #import pyCTF.image
 
+enable_jit = True
+
 
 __all__ = [ '.misc', 
 '.profile', 

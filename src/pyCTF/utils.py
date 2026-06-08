@@ -5,8 +5,13 @@ This module contains miscellanous functions used by other  modules
 in the PyCTF package.
 '''
 
-import numba
-from numba import jit
+from numba import jit, config
+
+from pyCTF.__init__ import enable_jit
+if enable_jit == True:
+    config.DISABLE_JIT = True
+else:
+    config.DISABLE_JIT = False
 
 import numpy as np
 from numpy.polynomial import polynomial
