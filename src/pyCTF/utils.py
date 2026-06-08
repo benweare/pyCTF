@@ -9,6 +9,7 @@ import numba
 from numba import jit
 
 import numpy as np
+from numpy.polynomial import polynomial as P
 import scipy
 from scipy.constants import( e, c, m_e, h )
 
@@ -324,7 +325,6 @@ def fit( x_min, y_min, lamb ):
     -----
     Redundant with zeros.fit_numpy(), but does not calculate Cs or defocus.
     '''
-    from numpy.polynomial import polynomial as P
     [intercept, slope] = P.polyfit(x_min, y_min, 1, full=False )
     # covariance
     cov = np.sqrt( np.diagonal( np.cov( x_min, y_min )))
