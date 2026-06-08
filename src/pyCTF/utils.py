@@ -9,7 +9,8 @@ import numba
 from numba import jit
 
 import numpy as np
-from numpy.polynomial import polynomial as P
+from numpy.polynomial import polynomial
+
 import scipy
 from scipy.constants import( e, c, m_e, h )
 
@@ -303,7 +304,6 @@ def bin():
     return
 
 
-@jit
 def fit( x_min, y_min, lamb ):
     '''
     Fit gradient for spherical aberration using Numpy.
@@ -325,7 +325,7 @@ def fit( x_min, y_min, lamb ):
     -----
     Redundant with zeros.fit_numpy(), but does not calculate Cs or defocus.
     '''
-    [intercept, slope] = P.polyfit(x_min, y_min, 1, full=False )
+    [intercept, slope] = polynomial.polyfit(x_min, y_min, 1, full=False )
     # covariance
     cov = np.sqrt( np.diagonal( np.cov( x_min, y_min )))
     return slope, intercept, cov
@@ -334,8 +334,8 @@ def fit( x_min, y_min, lamb ):
 # Calculate the Cs and defocus from the gradient and y-intercept.
 # TO DO: move to utils.
 def calc_cs_and_defocus( m, c, lamb ):
-    Cs = slope / ( lamb**3 )
-    defocus = -intercept /( -2 * lamb )
+    Cs = m / ( lamb**3 )
+    defocus = -c /( -2 * lamb )
     return Cs, defocus
 
 
