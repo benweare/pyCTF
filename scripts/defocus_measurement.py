@@ -11,9 +11,11 @@ Contact: benjamin.weare1@nottingham.ac.uk-n0spam
 Notes
 -----
 For compatibility with DigitalMicrograph, use numpy v1.23.5
+Works on v3.62 on K3 server.
+May take a while to run the first time as numba works.
+Recommend running on background thread.
 
 '''
-
 
 import numpy as np
 
@@ -27,7 +29,7 @@ from pyCTF.fourier import Fourier
 
 
 from numba import jit, config
-config.DISABLE_JIT = True
+config.DISABLE_JIT = False
 
 # Define functions.
 
@@ -47,9 +49,10 @@ def _calc_scale( image, scale ):
 
 
 # Function to handle measuring the defocus using ctf object.
-def _measure_defocus( ctf ):
+def _defocus_measure( ctf ):
+    x = ctf.max_freq_inscribed
     # Get radial profiles.
-    ctf.get_profiles( f_limits=[0,ctf.max_freq_inscribed], polynomial = 5 )
+    ctf.get_profiles( f_limits=[0, x], polynomial = 5 )
     # Get zeros.
     ctf.get_zeros()
     # Fit Cs and defocus using numpy method.
@@ -102,7 +105,7 @@ def main_loop( front_image ):
     ctf.remove_background( 5, 5 )
     
     # Do the defocus measurement.
-    _measure_defocus( ctf )
+    _defocus_measure( ctf )
     
     print('\nFinished.')
     
@@ -114,14 +117,19 @@ front_image = DM.GetFrontImage()
 
 ctf = main_loop( front_image )
 
-print( ctf.defocus )
+print( ctf.defocus*1e-9 )
 
 # Show all the images.
 result_image = _np_array_to_dm_image( ctf.image, title='Cropped FFT of ' + front_image.GetName() )
+result_image.SetDimensionScale( 0, ctf.scale )
+result_image.SetDimensionScale( 1, ctf.scale )
+result_image.SetDimensionUnitString( 0, '1/nm' )
+result_image.SetDimensionUnitString( 1, '1/nm' )
 result_image.ShowImage()
 
 sprof = _np_array_to_dm_image( ctf.smoothed_profile, title='Smoothed Radial Profile' )
+sprof.SetDimensionScale( 0, ctf.scale )
+sprof.SetDimensionUnitString( 0, '1/nm' )
 
 sprof.ShowImage()
-
-# End of script.
+# End of script
