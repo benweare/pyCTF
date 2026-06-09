@@ -8,7 +8,7 @@ For use with DM, do make sure use numpy 1.23.5 and do not update.
 
 DM is not playing well with numba or jit atm.
 
-ctrol+shift+q to kill scripts running on background thread
+'ctrl + shift + q' to kill scripts running on background thread.
 
 Note: currently scales poorly as FFT-intensive.
 '''
@@ -18,9 +18,6 @@ import sys
 import time
 import traceback
 
-# Required as per DM-Script manual.
-#sys.argv.extend(['-a', ' '])
-#import matplotlib.pyplot as plt
 
 import DigitalMicrograph as DM
 
@@ -64,7 +61,7 @@ class imageListener( DM.Py_ScriptObject ):
             #Set the calibration based on the original data
             self.result_image.SetDimensionCalibration(0,origin,x_scale,scale_unit,0)
             self.result_image.SetDimensionCalibration(1,origin,x_scale,scale_unit,0)
-            #Get the numpy array of the result image so I can directly change the data values later
+            #Get the numpy array of the image.
             self.result_data=self.result_image.GetNumArray()
             
             #Set the image name which will be displayed in the image window's title bar
