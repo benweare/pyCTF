@@ -2,13 +2,13 @@
 A class to measure twofold astigmatism in CTFs.
 '''
 
-from numba import jit, config
+#from numba import jit, config
 
-from pyCTF.__init__ import enable_jit
-if enable_jit == True:
-    config.DISABLE_JIT = True
-else:
-    config.DISABLE_JIT = False
+#from pyCTF.__init__ import enable_jit
+#if enable_jit == True:
+#    config.DISABLE_JIT = True
+#else:
+#    config.DISABLE_JIT = False
 
 
 import numpy as np 
@@ -215,7 +215,7 @@ class Astig( LineProfiles ):
         return angle, output, maximum, minimum
 
 
-    @jit
+    #@jit
     def _get_correlation( output, image ):
         # Split into seperate function as Scipy correlate not
         # working well with Numba.
@@ -225,7 +225,7 @@ class Astig( LineProfiles ):
         return angle, output, maximum, minimum
 
 
-    @jit
+    #@jit
     def calc_angles( ElectronImage ):
         '''
         Calculate values to draw lines on an image.
@@ -296,7 +296,7 @@ class Astig( LineProfiles ):
         return polar
     
 
-    @jit
+    #@jit
     # See CTFFIND4 paper for method used here.
     def __magnitude_correlate( warped, polar ):
         '''
@@ -329,7 +329,7 @@ class Astig( LineProfiles ):
         return val
     
 
-    @jit
+    #@jit
     def magnitude_measure( image, slices, max_val, CTF2D, **kwargs ):
         '''
         Wrapper to measure magnitude of astigmatism.
@@ -383,7 +383,7 @@ class Astig( LineProfiles ):
         return vals, a, polar_list
 
 
-    @jit
+    #@jit
     # Other methods.
     def __find_astig_defocus( vals, a ):
         '''

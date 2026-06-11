@@ -2,13 +2,12 @@
 A class to measure CTF zeros with contained methods.
 '''
 
-from numba import jit, config
+#from numba import jit, config
 
-from pyCTF.__init__ import enable_jit
-if enable_jit == True:
-    config.DISABLE_JIT = True
-else:
-    config.DISABLE_JIT = False
+#if enable_jit == True:
+#    config.DISABLE_JIT = True
+#else:
+#    config.DISABLE_JIT = False
 
 import numpy as np 
 import scipy
@@ -60,7 +59,7 @@ class Zeros:
         return
 
 
-    @jit
+    #@jit
     def fit_numpy( x_min, y_min, lamb ):
         '''
         Fit gradient for spherical aberration using Numpy.
@@ -117,7 +116,7 @@ class Zeros:
         return minima, maxima
 
 
-    @jit
+    #@jit
     def filter_zeros( minima, prof, freq, xlim, ylim ):
         '''
         Filter data by passed limts. 
@@ -392,4 +391,3 @@ class Zeros:
             string+='\n|'+space1+str(n)+'         |'+space2+str(m)+'   |'
         string+='\n|------------------|-------|' 
         return string
-    

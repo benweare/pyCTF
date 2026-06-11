@@ -4,13 +4,13 @@ Module for handling line profiles.
 
 import numpy as np
 
-from numba import jit, config
+#from numba import jit, config
 
-from pyCTF.__init__ import enable_jit
-if enable_jit == True:
-    config.DISABLE_JIT = True
-else:
-    config.DISABLE_JIT = False
+#from pyCTF.__init__ import enable_jit
+#if enable_jit == True:
+#    config.DISABLE_JIT = True
+#else:
+#    config.DISABLE_JIT = False
 
 import scipy
 from scipy.signal import savgol_filter
@@ -50,7 +50,7 @@ class Profile:
         return
 
 
-    @jit#(debug=True)
+    #@jit#(debug=True)
     def radial_profile( data, centX, centY ):
         '''
         Create radial profile of 2D array.
@@ -89,7 +89,7 @@ class Profile:
         return radialprofile, bins
 
 
-    @jit
+    #@jit
     def crop_frequency( data, freq, f_limits ):
         '''
         Crop profile to a range.

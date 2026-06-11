@@ -3,13 +3,13 @@ Module for Fourier-space methods.
 '''
 
 # Requires rocket-fft 0.3.1 on top of numba to handle the FFTs
-from numba import jit, config
+#from numba import jit, config
 
-from pyCTF.__init__ import enable_jit
-if enable_jit == True:
-    config.DISABLE_JIT = True
-else:
-    config.DISABLE_JIT = False
+#from pyCTF.__init__ import enable_jit
+#if enable_jit == True:
+#    config.DISABLE_JIT = True
+#else:
+#    config.DISABLE_JIT = False
 
 import numpy as np 
 import matplotlib.pyplot as plt
@@ -76,7 +76,7 @@ class Fourier:
         return iscale
         
 
-    @jit(debug=True)
+    #@jit(debug=True)
     def imfft( image ):
         '''
         Fast Fourier transform of a square array.
@@ -100,7 +100,7 @@ class Fourier:
         FT = np.fft.fftshift( FT )
         return FT
 
-    @jit
+    #@jit
     def inv_imfft( image ):
         '''
         Inverse fast Fourier transform of a square array.
@@ -118,7 +118,7 @@ class Fourier:
         imfft = np.fft.ifft2( imfft )
         return imfft
 
-    @jit
+    #@jit
     def log_mod( image ):
         '''
         Log-modulus of array.
@@ -142,7 +142,7 @@ class Fourier:
         return logmod
 
     # fix counting stack length
-    @jit
+    #@jit
     def fft_stack( stack ):
         '''
         2D FFT on each slice in a stack. 
@@ -169,7 +169,7 @@ class Fourier:
             output[:, :, n] = Fourier.imfft( stack[:, :, n] )
         return output
 
-    @jit
+    #@jit
     def fft3d( stack ):
         '''
         3DFFT of a stack.
@@ -509,7 +509,7 @@ class Fourier:
         return FT
 
 
-    @jit
+    #@jit
     def measure_arcs( image, width ):
         '''
         Measure the arcs in the 3D Fourier transform.

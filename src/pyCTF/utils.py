@@ -5,13 +5,13 @@ This module contains miscellanous functions used by other  modules
 in the PyCTF package.
 '''
 
-from numba import jit, config
+#from numba import jit, config
 
-from pyCTF.__init__ import enable_jit
-if enable_jit == True:
-    config.DISABLE_JIT = True
-else:
-    config.DISABLE_JIT = False
+#from pyCTF.__init__ import enable_jit
+#if enable_jit == True:
+#    config.DISABLE_JIT = True
+#else:
+#    config.DISABLE_JIT = False
 
 import numpy as np
 from numpy.polynomial import polynomial
@@ -19,7 +19,7 @@ from numpy.polynomial import polynomial
 import scipy
 from scipy.constants import( e, c, m_e, h )
 
-@jit
+#@jit
 def scherzer_defocus( input ):
     '''
     Scherzer defocus, in nanometers.
@@ -32,7 +32,7 @@ def scherzer_defocus( input ):
 #    lichte = (-3/4) * Cs * (R * lamb**2)
 #    return lichte
 
-@jit
+#@jit
 def kv_to_lamb( kV ):
     """
     Calculate accelerating voltage from wavelength.
@@ -62,7 +62,7 @@ def kv_to_lamb( kV ):
     lamb = PT/np.sqrt(PBA+PBB)
     return lamb
 
-@jit
+#@jit
 def normalise_data_range( data, dmin=0, dmax=1 ):
     '''
     Normalise range of array.
@@ -260,7 +260,7 @@ def make_scalebar( val, scale, ax ):
     return scalebar
 
 
-@jit#(debug=True)
+#@jit#(debug=True)
 def find_iradius_itheta( image, scale ):
     '''
     Find the distance from the centre and radial angle of each pixel in an 
