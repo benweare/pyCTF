@@ -38,6 +38,21 @@ def _calc_scale( image, scale ):
     return iscale
 
 
+def _bin_array(data, binstep=2, binsize=2, func=np.sum):
+    # Function to bin array with numpy. Default is 2x binning.
+    # See: https://stackoverflow.com/questions/21921178/binning-a-numpy-array/42024730#42024730
+    axes = [0, 1]
+    data = np.array(data)
+    dims = np.array(data.shape)
+    for axis in axes:
+        argdims = np.arange(data.ndim)
+        argdims[0], argdims[axis]= argdims[axis], argdims[0]
+        data = data.transpose(argdims)
+        data = [func(np.take(data,np.arange(int(i*binstep),int(i*binstep+binsize)),0),0) for i in np.arange(dims[axis]/binstep)]
+        data = np.array(data).transpose(argdims)
+    return data
+
+
 # From Ben Miller script
 class imageListener( DM.Py_ScriptObject ):
     '''
