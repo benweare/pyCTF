@@ -6,7 +6,7 @@ DigitalMicrograph
 
 For use with DM, do make sure use numpy 1.23.5 and do not update.
 
-DM is not playing well with numba or jit atm.
+Must not use Numba and JIT as DM hangs.
 
 'ctrl + shift + q' to kill scripts running on background thread.
 
@@ -18,6 +18,7 @@ import sys
 import time
 import traceback
 
+from time import sleep
 
 import DigitalMicrograph as DM
 
@@ -30,6 +31,13 @@ from pyCTF.profile import Profile
 from numba import jit, config
 config.DISABLE_JIT = False
 
+
+# Calculate the FFT scale.
+def _calc_scale( image, scale ):
+    iscale = 1/( len(image[0]) * scale )
+    return iscale
+
+
 # From Ben Miller script
 class imageListener( DM.Py_ScriptObject ):
     '''
@@ -40,7 +48,7 @@ class imageListener( DM.Py_ScriptObject ):
     
     
     # Constructor.
-    def __init__(self,img):
+    def __init__(self, img):
         try:
             #Create an index that is incremented each time data is processed.
             self.i = 0
@@ -54,8 +62,8 @@ class imageListener( DM.Py_ScriptObject ):
             #get the shape and calibration of the original image
             (input_sizex, input_sizey) = self.data.shape
             origin, x_scale, scale_unit =  self.imgref.GetDimensionCalibration(1, 0)
+            '''
             if scale_unit == b'\xb5m': scale_unit = 'um' #scale unit of microns causes problems for python in DM
-            
             #Create a new image to contain the results of processing.
             self.result_image = DM.CreateImage( self.data.copy() )
             #Set the calibration based on the original data
@@ -67,8 +75,9 @@ class imageListener( DM.Py_ScriptObject ):
             #Set the image name which will be displayed in the image window's title bar
             self.result_image.SetName("Extract of " + img.GetName())
             self.result_data=self.result_image.GetNumArray()
+            '''
             
-            # CTF variables - causing some issue with the PyScriptObject class?
+            # CTF variables.
             self.fft = Fourier.imfft( self.data.copy() )
             self.temp = self.fft.copy()
             self.fft = Fourier.crop( self.fft.copy(), len(self.fft[0])/4 )
@@ -82,16 +91,55 @@ class imageListener( DM.Py_ScriptObject ):
             self.dm_prof = self._np_array_to_dm_image( self.prof.copy(), title='RadialProfile' )
             self.prof = self.dm_prof.GetNumArray()
             
+            # Make CTF object.
+            i_scale = _calc_scale( self.data.copy(), x_scale )
+            kv = 200
+            self.ctf = import_ctf( self.fft.copy(), 200, i_scale )
+            
+            # Set scale.
+            self.dm_fft.SetDimensionScale( 0, i_scale)
+            self.dm_fft.SetDimensionScale( 1, i_scale )
+            self.dm_prof.SetDimensionScale( 0, i_scale )
+            self.dm_prof.SetDimensionUnitString( 0, ('1/'+scale_unit) )
+            self.dm_fft.SetDimensionUnitString( 0, ('1/'+scale_unit) )
+            self.dm_fft.SetDimensionUnitString( 1, ('1/'+scale_unit) )
+            
             # Show images.
-            self.result_image.ShowImage()
+            #self.result_image.ShowImage()
             self.dm_fft.ShowImage()
             self.dm_prof.ShowImage()
+            self._set_window_postion()
+            
+            self.line_plot = (self.dm_prof.GetImageDisplay(0)).GetLinePlotImageDisplay()
+            self.line_plot.SetContrastLimits( -0.2, 1.0)
+            
             
             
             DM.Py_ScriptObject.__init__(self)
             self.stop = 0
         except:
             print( traceback.format_exc() )
+        return
+    
+    # Set the position of the new windows in DM.
+    def _set_window_postion( self ):
+        # Front image location
+        image_doc = self.imgref.GetOrCreateImageDocument()
+        doc_window = image_doc.GetWindow()
+        size = doc_window.GetFrameSize()
+        position = doc_window.GetFramePosition()
+        # FFT location
+        fft_doc = self.dm_fft.GetOrCreateImageDocument()
+        fft_window = fft_doc.GetWindow()
+        fft_window.SetFramePosition(size[0], position[1])
+        fft_window.SetFrameSize( int(size[1]/2), int(size[1]/2) )
+        # Profile location
+        size = fft_window.GetFrameSize()
+        position = fft_window.GetFramePosition()
+        prof_doc = self.dm_prof.GetOrCreateImageDocument()
+        prof_window = prof_doc.GetWindow()
+        prof_window.SetFramePosition(position[0], size[1])
+        prof_window.SetFrameSize( size[0], size[0] )
         return
     
     
@@ -111,24 +159,20 @@ class imageListener( DM.Py_ScriptObject ):
                 id = roi.GetID()
                 break
         if id is None:
-            #If No ROI is found, create one that covers the whole image. 
-            print("\nRectangular ROI not found... using whole image")
+            ## TO DO
+            #If No ROI is found, create largest sqaure and center. 
+            print("\nCreating square ROI.")
             data_shape = image.GetNumArray().shape
+            print(data_shape)
             roi=DM.NewROI()
-            roi.SetRectangle(0, 0, data_shape[0], data_shape[1])
+            # x1, y1, x2, y3
+            roi.SetRectangle(0, 0, data_shape[0]/4, data_shape[0]/4)
             imageDisplay.AddROI(roi)
             roi.SetVolatile(False)
             roi.SetResizable(False)
             id = roi.GetID()
         return id
     
-    
-        # Function run each time updates.
-    def ROI_process(self, image_data):
-        '''
-        Function to be called every time data is updated.
-        '''
-        return
     
     
     def _np_array_to_dm_image( self, input_array, **kwargs ):
@@ -153,27 +197,21 @@ class imageListener( DM.Py_ScriptObject ):
                 self.data = self.imgref.GetNumArray()[int(val):int(val3),int(val2):int(val4)]
                 
                 #Process the data and place in the result arrays.
-                self.result_data[:, :] = self.data.copy()# = self.ROI_process( self.data )
+                #self.result_data[:, :] = self.data.copy()# = self.ROI_process( self.data )
                 
-                # DM doesn't play well with numba?
-                self.temp[:] = np.fft.fft2( self.data.copy() )
-                #self.fft[:] = Fourier.crop( self.temp.copy(), len(fft[0]) )
-                self.fft[:] = np.fft.fftshift( self.fft.copy() )
-                self.fft[:] = np.log( np.abs(self.fft.copy()) )
-                #self.fft[:] = Fourier.imfft( self.data.copy() )
-                #self.fft[:] = Fourier.log_mod( self.fft.copy() )
-                #self.fft[:], _, _ = Fourier.remove_bckg( self.fft.copy(), 8, 10 )
+                
+                temp = Fourier.log_mod( Fourier.imfft( self.data.copy() ))
+                self.fft[:] = Fourier.crop( temp.copy(), len(self.fft[0]) )
+                self.fft[:], _, _ = Fourier.remove_bckg( self.fft.copy(), 8, 10 )
                 
                 self.prof[:], _ = Profile.radial_profile( self.fft.copy(), len(self.fft[0])/2, len(self.fft[0])/2 )
                 
-                #Update the image displays.
-                self.result_image.UpdateImage()
                 self.dm_fft.UpdateImage()
                 self.dm_prof.UpdateImage()
-                #print('/rprocessed frames:' + str(self.i) )
+                self.line_plot.SetContrastLimits( -0.2, 1.0)
                 
                 #Increment an index each time data is processed.
-                self.i = self.i+1
+                #self.i = self.i+1
         except:
             print(traceback.format_exc())
         return
