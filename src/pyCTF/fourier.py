@@ -30,6 +30,7 @@ class Fourier:
     Methods
     -------
     imfft( image )
+    binned_imfft( image )
     inv_imfft( image )
     log_mod( image )
     fft_stack( stack )
@@ -45,6 +46,8 @@ class Fourier:
     process_CTF( image )
     measure_arcs( image, width )
     plot_arcs( image, output )
+    calculate_scale( image, scale )
+    calculate_bin_factor( distance, pixel_size, target )
 
     Notes
     -----
@@ -89,27 +92,52 @@ class Fourier:
         ft_scale : float
             Scale of Fourier transform.
 
+        Notes
+        -----
+        "ft_scale" is given by the reciprocal length of the image x-axis.
+        Setting "scale" = 1.0 will give the scale in 1/pixel units.
+
+
         '''
         ft_scale = 1/( len(image[0]) * scale )
         return ft_scale
 
 
     # Calculate how to much to bin the FFT.
-    def calculate_bin_factor( distance, pixel_size, target_nyquist ):
+    def calculate_bin_factor( distance, pixel_size, target ):
         '''
         Calculates binning factor to nearest interger via truncation.
+
+        Parameters
+        ----------
+        distance : int
+            Length of array to be binned.
+            
+
+        pixel_size : float
+            Pixel size of array.
+
+        target : int
+            Desired maximum frequency after binning.
+
+        Returns
+        -------
+        binning_factor : float
+            Required binning to achieve target.
+
+
         '''
         # Get scale of FT then max frequency.
         nyquist = (1/(distance * pixel_size ))*(distance/2)
-        import math
-        binning_factor = np.trunc( (nyquist / target_nyquist) )
-        print(binning_factor)
+        binning_factor = np.trunc( (nyquist / target) )
         return binning_factor
 
 
     def binned_imfft( image, im_scale, frequency=4.0, binning_factor=2.0, mode='calc' ):
         '''
         Binned fast Fourier transform of a square array.
+
+        Input image is binned, then a Fourier transform is performed.
 
         Parameters
         ----------
@@ -135,9 +163,9 @@ class Fourier:
 
         Notes
         -----
-        Moves DC frequencies to centre of output array.
-        FFT performed using Numpy.
-        Bins to target Nyquist frequency. 
+        Can be binned to a target maximum frequency, or by a integer binning factor.
+        Binning of less than x2 is not supported. Otherwise, functions the same as 
+        Fourier.imfft().
         '''
         if mode == 'calc':
             binning_factor = Fourier.calculate_bin_factor( len(image[0]), im_scale, frequency  )
@@ -180,6 +208,7 @@ class Fourier:
         FT = np.fft.fftshift( FT )
         return FT
 
+
     #@jit
     def inv_imfft( image ):
         '''
@@ -197,6 +226,7 @@ class Fourier:
         '''
         imfft = np.fft.ifft2( imfft )
         return imfft
+
 
     #@jit
     def log_mod( image ):
@@ -220,6 +250,7 @@ class Fourier:
         '''
         logmod = np.log( np.abs( image ) )
         return logmod
+
 
     # fix counting stack length
     #@jit
@@ -249,6 +280,7 @@ class Fourier:
             output[:, :, n] = Fourier.imfft( stack[:, :, n] )
         return output
 
+
     #@jit
     def fft3d( stack ):
         '''
@@ -275,6 +307,7 @@ class Fourier:
         #output = np.fft.fftshift( output, axes=(0, 2) )
         return output
 
+
     # plot views of three axes of 3D FFT
     # unfinished
     def plot_3d_fft( data ):
@@ -290,6 +323,7 @@ class Fourier:
         # rotate
         axs[1].matshow( data )
         return
+
 
     def crop( image, width, **kwargs ):
         '''
@@ -329,6 +363,7 @@ class Fourier:
             out = image[ xstart:xend, ystart:yend ]
         return out
 
+
     # redundant with method in CTF image class, but more general
     def remove_bckg( image, rstart1, rstart2 ):
         '''
@@ -337,12 +372,18 @@ class Fourier:
         Parameters
         ----------
         image : array
+            Real-valued Fourier transform containing a CTF.
         rstart1 : float
         rstart2 : float
 
         Returns
         -------
         image : array
+            Background-subtracted CTF.
+        LF_bkg : array
+            Extracted low frequency background.
+        E_bkg : array
+            Extracted envelope.
 
         Notes
         -----
@@ -379,6 +420,7 @@ class Fourier:
         #del( imfft )
         #del( iradius )
         return image, LF_bkg, E_bkg
+
 
     def remove_bckg_stack( stack, rstart1, rstart2 ):
         '''
@@ -442,6 +484,7 @@ class Fourier:
                                                     centY )
         return output
 
+
     def show_fft( image ):
         '''
         Display a Fourier transform as an image.
@@ -466,8 +509,10 @@ class Fourier:
         ax.set_yticks([])
         return
 
+
     # FT 2D stack and get radial profile
     # update default radii
+    # TO DO: replace crop with binning?
     def through_focus( stack, **kwargs ):
         '''
         Process a through-focus series
@@ -553,6 +598,7 @@ class Fourier:
         # rearrange to convention defined above
         stack = np.moveaxis( stack, 0, 2 )
         return stack
+
 
     # add kwargs for variable in last two methods
     def process_CTF( image, **kwargs ):
