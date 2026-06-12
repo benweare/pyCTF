@@ -28,8 +28,8 @@ from pyCTF.image import import_ctf
 from pyCTF.fourier import Fourier
 from pyCTF.profile import Profile
 
-from numba import jit, config
-config.DISABLE_JIT = False
+#from numba import jit, config
+#config.DISABLE_JIT = False
 
 
 # Calculate the FFT scale.
@@ -37,6 +37,11 @@ def _calc_scale( image, scale ):
     iscale = 1/( len(image[0]) * scale )
     return iscale
 
+# Calculate how to much to bin the FFT.
+def _calc_bin_factor( pixel_size, target_nyquist ):
+    nyquist = 1/pixel_size
+    binning_factor = nyquist / target_nyquist
+    return binning_factor
 
 def _bin_array(data, binstep=2, binsize=2, func=np.sum):
     # Function to bin array with numpy. Default is 2x binning.

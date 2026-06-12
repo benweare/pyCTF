@@ -70,10 +70,90 @@ class Fourier:
         from numpy.fft import fftshift
         return
 
+
     # Calculate the scale of the Fourier transform from the input image scale and size.
-    def _calc_scale( image, scale ):
-        iscale = 1/( len(image[0]) * scale )
-        return iscale
+    def calculate_scale( image, scale ):
+        '''
+        Calculate the scale of a Fourier transform.
+
+        Parameters
+        ----------
+        image : array
+            Real or interger valued array.
+
+        scale : float
+            Pixel size of array.
+
+        Returns
+        -------
+        ft_scale : float
+            Scale of Fourier transform.
+
+        '''
+        ft_scale = 1/( len(image[0]) * scale )
+        return ft_scale
+
+
+    # Calculate how to much to bin the FFT.
+    def calculate_bin_factor( distance, pixel_size, target_nyquist ):
+        '''
+        Calculates binning factor to nearest interger via truncation.
+        '''
+        # Get scale of FT then max frequency.
+        nyquist = (1/(distance * pixel_size ))*(distance/2)
+        import math
+        binning_factor = np.trunc( (nyquist / target_nyquist) )
+        print(binning_factor)
+        return binning_factor
+
+
+    def binned_imfft( image, im_scale, frequency=4.0, binning_factor=2.0, mode='calc' ):
+        '''
+        Binned fast Fourier transform of a square array.
+
+        Parameters
+        ----------
+        image : array
+            Real or interger valued array.
+
+        im_scale : float
+            Pixel size of array.
+
+        frequency : float
+            Target Nyquist frequency for binned array.
+
+        mode : string
+            Mode to calculate binning factor. 'calc' or 'bin'
+
+        binning_factor : int
+            Factor to bin array by if in bin mode.
+
+        Returns
+        -------
+        FT : array
+            Complex-valued array.
+
+        Notes
+        -----
+        Moves DC frequencies to centre of output array.
+        FFT performed using Numpy.
+        Bins to target Nyquist frequency. 
+        '''
+        if mode == 'calc':
+            binning_factor = Fourier.calculate_bin_factor( len(image[0]), im_scale, frequency  )
+        
+        if binning_factor > 1:
+            from pyCTF.utils import bin_array
+            print('\nApplying x' + str(binning_factor) +' binning.' )
+            binned_image = bin_array( image, binning_factor, binning_factor )
+        else:
+            print('\nFractional binning not allowed, no binning applied.')
+            binned_image = image
+
+        FT = np.zeros( image.size )
+        FT = np.fft.fft2( binned_image )
+        FT = np.fft.fftshift( FT )
+        return FT
         
 
     #@jit(debug=True)

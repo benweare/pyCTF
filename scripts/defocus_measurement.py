@@ -10,10 +10,11 @@ Contact: benjamin.weare1@nottingham.ac.uk-n0spam
 
 Notes
 -----
-For compatibility with DigitalMicrograph, use numpy v1.23.5
-Works on v3.62 on K3 server.
-May take a while to run the first time as numba works.
-Recommend running on background thread.
+- For compatibility with DigitalMicrograph, use numpy v1.23.5
+- Works on v3.62 on K3 server; and v3.60 on PC.
+- DM prone to crash if using a package
+ installed in editable mode using pip.
+- Recommend running on background thread.
 
 '''
 
@@ -24,12 +25,11 @@ import DigitalMicrograph as DM
 import pyCTF
 from pyCTF.image import ElectronImage
 from pyCTF.image import import_ctf
-
 from pyCTF.fourier import Fourier
 
 
-from numba import jit, config
-config.DISABLE_JIT = False
+#from numba import jit, config
+#config.DISABLE_JIT = False
 
 # Define functions.
 
@@ -48,6 +48,12 @@ def _calc_scale( image, scale ):
     return iscale
 
 
+# Calculate how to much to bin the FFT.
+def _calc_bin_factor( pixel_size, target_nyquist ):
+    nyquist = 1/pixel_size
+    binning_factor = nyquist / target_nyquist
+    return binning_factor
+
 # Function to handle measuring the defocus using ctf object.
 def _defocus_measure( ctf ):
     x = ctf.max_freq_inscribed
@@ -58,6 +64,28 @@ def _defocus_measure( ctf ):
     # Fit Cs and defocus using numpy method.
     m, c, cov = pyCTF.utils.fit( ctf.x_min, ctf.y_min, ctf.lamb )
     ctf.Cs, ctf.defocus = pyCTF.utils.calc_cs_and_defocus( m, c, ctf.lamb )
+    return
+
+
+# Set the position of the new windows in DM.
+def _set_window_postion( ):
+    # Front image location
+    image_doc = self.imgref.GetOrCreateImageDocument()
+    doc_window = image_doc.GetWindow()
+    size = doc_window.GetFrameSize()
+    position = doc_window.GetFramePosition()
+    # FFT location
+    fft_doc = self.dm_fft.GetOrCreateImageDocument()
+    fft_window = fft_doc.GetWindow()
+    fft_window.SetFramePosition(size[0], position[1])
+    fft_window.SetFrameSize( int(size[1]/2), int(size[1]/2) )
+    # Profile location
+    size = fft_window.GetFrameSize()
+    position = fft_window.GetFramePosition()
+    prof_doc = self.dm_prof.GetOrCreateImageDocument()
+    prof_window = prof_doc.GetWindow()
+    prof_window.SetFramePosition(position[0], size[1])
+    prof_window.SetFrameSize( size[0], size[0] )
     return
 
 
@@ -105,7 +133,7 @@ def main_loop( front_image ):
     ctf.remove_background( 5, 5 )
     
     # Do the defocus measurement.
-    _defocus_measure( ctf )
+    #_defocus_measure( ctf )
     
     print('\nFinished.')
     
@@ -113,11 +141,12 @@ def main_loop( front_image ):
 
 
 # Script starts here.
+print('\nStarting defocus measurement.')
 front_image = DM.GetFrontImage()
 
 ctf = main_loop( front_image )
 
-print( ctf.defocus*1e-9 )
+print( 'Defocus = ' + str(ctf.defocus*1e-9) )
 
 # Show all the images.
 result_image = _np_array_to_dm_image( ctf.image, title='Cropped FFT of ' + front_image.GetName() )

@@ -15,7 +15,9 @@ We welcome feedback and suggestions for improvements!
 
 ## Installation
 
-pyCTF can be installed with pip.
+pyCTF can be installed with pip:
+
+"pip install /path/to/pyCTF"
 
 ## Simulating contrast transfer functions
 
