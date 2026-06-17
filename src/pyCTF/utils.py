@@ -308,13 +308,33 @@ def find_iradius_itheta( image, scale ):
 # function to bin images.
 def bin_array(data, binstep=2, binsize=2, func=np.sum):
     '''
-    Function to bin arrays.
+    Function to bin arrays by an arbitary integer.
+
+    Default is 2x2 binning.
+
+    Parameters
+    ----------
+    data : array
+    binstep : int
+    binsize : int
+    func : numpy method
     '''
     # Function to bin array with numpy. Default is 2x binning.
     # See: https://stackoverflow.com/questions/21921178/binning-a-numpy-array/42024730#42024730
     axes = [0, 1]
     data = np.array(data)
+
+    remainder =  np.mod( len(data[0]), binstep )
+
+    if remainder != 0:
+        print('\nCropping array to size ' + str(len(data[0])-remainder) )
+        try:
+            data = crop_array( data, (len(data[0])-remainder) )
+        except:
+            print('\nError: could not crop array.')
+
     dims = np.array(data.shape)
+
     for axis in axes:
         argdims = np.arange(data.ndim)
         argdims[0], argdims[axis]= argdims[axis], argdims[0]
@@ -322,6 +342,45 @@ def bin_array(data, binstep=2, binsize=2, func=np.sum):
         data = [func(np.take(data,np.arange(int(i*binstep),int(i*binstep+binsize)),0),0) for i in np.arange(dims[axis]/binstep)]
         data = np.array(data).transpose(argdims)
     return data
+
+
+def crop_array( image, width, **kwargs ):
+        '''
+        Centre-crop and array to a specified size.
+
+        Parameters
+        ----------
+        image : array
+        width : int
+        zstart : int, optional
+        zend : int, optional
+
+        Returns
+        -------
+        out : array
+
+        Notes
+        -----
+        Used to crop Fourier transform to centre region containing contrast
+        transfer function.
+        '''
+        zstart = kwargs.get( 'zstart', 0 )
+        zend = kwargs.get( 'zend', None )
+        centX = len(image[0])/2
+        centY = len(image[1])/2
+        # don't let the axis be padded
+        if ( width > len(image[0]) ):
+            width = len(image[0])
+        # slice image
+        xstart = round( centX - (width/2) )
+        xend = round( centX + (width/2) )
+        ystart = round( centY - (width/2) )
+        yend = round( centY + (width/2) )
+        if ( image.ndim == 3 ):
+            out = image[ xstart:xend, ystart:yend, zstart:zend ]
+        else:
+            out = image[ xstart:xend, ystart:yend ]
+        return out
 
 
 def fit( x_min, y_min, lamb ):

@@ -215,13 +215,32 @@ def _test_custom( filepath ):
 	from pyCTF.fourier import Fourier
 	from pyCTF.utils import show_image
 
-	image =  np.array( Image.open( filepath ))
-	FFT = Fourier.binned_imfft( image, 0.098486, 2.5, 'calc' )
+	#image =  np.array( Image.open( filepath ))
+	#FFT = Fourier.binned_imfft( image, 0.098486, 2.5, 'calc' )
 	#FFT = Fourier.imfft( image )
 	#FFT = Fourier.crop( FFT, 600 )
-	FFT = Fourier.log_mod( FFT )
+	#FFT = Fourier.log_mod( FFT )
 
-	show_image( FFT, scale=0.01, length=2 )
+	image = np.ones((99,99))
+	image[49,49]=0
+	bf = 15
+
+	'''
+	remainder =  np.mod( len(image[0]), bf )
+	print('Remainder = ' + str(remainder))
+	if remainder != 0:
+		try:
+			# Crop to correct size.
+			print('Cropping array to size ' + str(len(image[0])-remainder) )
+			image = Fourier.crop( image, (len(image[0])-remainder) )
+			print(len(image[0]))
+		except:
+			print('Error: could not crop array.')
+	'''
+	FFT = pyCTF.utils.bin_array( image, bf, bf)
+	print(len(FFT[0]))
+	show_image( FFT, scale=1, length=2 )
+	
 	return
 
 # Script starts here.
