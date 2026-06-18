@@ -221,25 +221,14 @@ def _test_custom( filepath ):
 	#FFT = Fourier.crop( FFT, 600 )
 	#FFT = Fourier.log_mod( FFT )
 
-	image = np.ones((99,99))
-	image[49,49]=0
-	bf = 15
+	#image = np.ones((100,100),dtype=np.float64)
+	image = np.random.choice(np.arange(100, dtype=np.int32), size=(100, 100))
+	image = pyCTF.utils.normalise_data_range(image)
+	image[49,49]=10
+	bf = 4
 
-	'''
-	remainder =  np.mod( len(image[0]), bf )
-	print('Remainder = ' + str(remainder))
-	if remainder != 0:
-		try:
-			# Crop to correct size.
-			print('Cropping array to size ' + str(len(image[0])-remainder) )
-			image = Fourier.crop( image, (len(image[0])-remainder) )
-			print(len(image[0]))
-		except:
-			print('Error: could not crop array.')
-	'''
 	FFT = pyCTF.utils.bin_array( image, bf, bf)
-	print(len(FFT[0]))
-	show_image( FFT, scale=1, length=2 )
+	show_image( FFT, scale=0, length=2 )
 	
 	return
 

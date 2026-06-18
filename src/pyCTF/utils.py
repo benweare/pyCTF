@@ -305,7 +305,6 @@ def find_iradius_itheta( image, scale ):
     return iradius, itheta
 
 
-# function to bin images.
 def bin_array(data, binstep=2, binsize=2, func=np.sum):
     '''
     Function to bin arrays by an arbitary integer.
@@ -318,14 +317,28 @@ def bin_array(data, binstep=2, binsize=2, func=np.sum):
     binstep : int
     binsize : int
     func : numpy method
-    '''
-    # Function to bin array with numpy. Default is 2x binning.
-    # See: https://stackoverflow.com/questions/21921178/binning-a-numpy-array/42024730#42024730
+
+    Warnings
+    --------
+    IndexError: Index X is out of bounds for axis 0 with size Y.
+
+    Notes
+    -----
+    This function will throw an IndexError if the length is the axis is not divisible
+    by the binning factor with no remainder. If the modulo of two is not zero, the
+    array is cropped to a smaller size using utils.crop_array().
+
+    Adapted from an example on Stack Overflow: 
+    https://stackoverflow.com/questions/21921178/binning-a-numpy-array/42024730#42024730
+    ''' 
+    if binstep == 1 and binsize == 1:
+        print('\nBinning factor = 1x, no binning applied.')
+        return data
+
     axes = [0, 1]
     data = np.array(data)
 
     remainder =  np.mod( len(data[0]), binstep )
-
     if remainder != 0:
         print('\nCropping array to size ' + str(len(data[0])-remainder) )
         try:
@@ -333,13 +346,23 @@ def bin_array(data, binstep=2, binsize=2, func=np.sum):
         except:
             print('\nError: could not crop array.')
 
-    dims = np.array(data.shape)
+    remainder =  np.mod( len(data[0]), binsize )
+    if remainder != 0:
+        print('\nCropping array to size ' + str(len(data[0])-remainder) )
+        try:
+            data = crop_array( data, (len(data[0])-remainder) )
+        except:
+            print('\nError: could not crop array.')
 
+    # Do the binning.
+    dims = np.array(data.shape)
     for axis in axes:
         argdims = np.arange(data.ndim)
         argdims[0], argdims[axis]= argdims[axis], argdims[0]
         data = data.transpose(argdims)
-        data = [func(np.take(data,np.arange(int(i*binstep),int(i*binstep+binsize)),0),0) for i in np.arange(dims[axis]/binstep)]
+        data = [func(np.take(\
+                data, np.arange(int(i*binstep), int(i*binstep+binsize)),0),0)\
+                for i in np.arange(dims[axis]/binstep)]# i.e. 100/2=50; for i in 50.
         data = np.array(data).transpose(argdims)
     return data
 
@@ -416,6 +439,12 @@ def calc_cs_and_defocus( m, c, lamb ):
     Cs = m / ( lamb**3 )
     defocus = -c /( -2 * lamb )
     return Cs, defocus
+
+
+# Create an array of noise for testing.
+def _create_noise_image( imsize=(100,100), x=100 ):
+    image = np.random.choice(np.arange(x, dtype=np.int32), size=imsize )
+    return image
 
 
 # line profiles
