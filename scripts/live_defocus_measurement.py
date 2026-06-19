@@ -14,6 +14,47 @@ Note: currently scales poorly as FFT-intensive.
 USe hybdrid scripting to speed up the DM FFTs
 '''
 
+'''
+    # Precomputing values to speed up.
+    def fast_remove_bckg( self, image ):
+        
+        # low frequency
+        imfft = np.fft.fft2( image )
+        imfft = np.fft.fftshift( imfft )
+        imfft = imfft * self.mask1
+        imfft = np.fft.ifft2( imfft )
+        LF_bkg = np.abs( imfft )
+        image = image - np.abs( imfft )
+
+        # high frequency
+        imfft = np.abs( image ) #natural log
+        imfft = np.fft.fft2( imfft)
+        imfft = np.fft.fftshift( imfft )
+        imfft = imfft * self.mask2
+        imfft = np.exp( np.abs(np.fft.ifft2( imfft )) )
+        image = image / imfft
+        return image
+
+    # Precompute iradius and masks
+            rstart1 = 8
+            rstart2 = 10
+            self.iradius, _ = pyCTF.utils.find_iradius_itheta( self.data.copy(), 1 )
+            n = range(0, np.size(self.iradius,0))
+            m = range(0, np.size(self.iradius,1))
+            self.mask1 = np.ones( self.data.shape )
+            for i in n:
+                for j in m:
+                    if self.iradius[i,j] >= rstart1:
+                        self.mask1[i,j] = 0
+                        
+            self.mask2 = np.ones( self.data.shape )
+            
+            for i in n:
+                for j in m:
+                    if self.iradius[i,j] >= rstart2:
+                        self.mask2[i,j] = 0
+'''
+
 import numpy as np
 import sys
 import time
