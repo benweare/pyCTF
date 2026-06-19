@@ -11,7 +11,7 @@ Must not use Numba and JIT as DM hangs.
 'ctrl + shift + q' to kill scripts running on background thread.
 
 Note: currently scales poorly as FFT-intensive.
-USe hybdrid scripting to speed up the DM FFTs
+Could use DM's FT to speed up?
 '''
 
 import numpy as np
@@ -31,34 +31,6 @@ from pyCTF.profile import Profile
 
 #from numba import jit, config
 #config.DISABLE_JIT = False
-
-
-# Calculate the FFT scale.
-def _calc_scale( image, scale ):
-    iscale = 1/( len(image[0]) * scale )
-    return iscale
-
-# Calculate how to much to bin the FFT.
-def _calc_bin_factor( pixel_size, target_nyquist ):
-    nyquist = 1/pixel_size
-    binning_factor = nyquist / target_nyquist
-    return binning_factor
-
-def _bin_array(data, binstep=2, binsize=2, func=np.sum):
-    # Function to bin array with numpy. Default is 2x binning.
-    # See: https://stackoverflow.com/questions/21921178/binning-a-numpy-array/42024730#42024730
-    axes = [0, 1]
-    data = np.array(data)
-    dims = np.array(data.shape)
-    for axis in axes:
-        argdims = np.arange(data.ndim)
-        argdims[0], argdims[axis]= argdims[axis], argdims[0]
-        data = data.transpose(argdims)
-        data = [func(np.take(data,np.arange(int(i*binstep),int(i*binstep+binsize)),0),0) for i in np.arange(dims[axis]/binstep)]
-        data = np.array(data).transpose(argdims)
-    return data
-
-
 
 class imageListener( DM.Py_ScriptObject ):
     '''
@@ -83,41 +55,21 @@ class imageListener( DM.Py_ScriptObject ):
             # Get the shape and calibration of the original image.
             (input_sizex, input_sizey) = self.data.shape
             origin, x_scale, scale_unit =  self.imgref.GetDimensionCalibration(1, 0)
-            self.x_scale = x_scale
+            self.i_scale = x_scale
             
-            # Calculate the binning factor for the target frequency.
-            self.binning_factor = Fourier.calculate_bin_factor( len(self.data[0]), x_scale, 3.0 )
+            self.temp = Fourier.log_mod( self.data.copy() )
+            self.temp[:], _, _ = Fourier.remove_bckg( self.temp.copy(), 8, 10 )
             
-            # CTF variables.
-            self.fft = Fourier.imfft( self.data.copy() )
-            #self.fft = Fourier.binned_imfft( self.data.copy(), self.x_scale, self.binning_factor, 'nocalc' )
-            #self.temp = self.fft.copy()
-            self.fft = Fourier.crop( self.fft.copy(), len(self.fft[0])/4 )
-            self.fft = Fourier.log_mod( self.fft )
-            self.fft, _, _ = Fourier.remove_bckg( self.fft, 8, 10 )
-            self.dm_fft = self._np_array_to_dm_image( self.fft, title='FFT' )
-            self.fft = self.dm_fft.GetNumArray()
-            self.dm_fft.ShowImage()
-            
-            self.prof, _ = Profile.radial_profile( self.fft.copy(), len(self.fft[0])/2, len(self.fft[0])/2 )
+            self.prof, _ = Profile.radial_profile( self.temp.copy(), len(self.data[0])/2, len(self.data[0])/2 )
             self.dm_prof = self._np_array_to_dm_image( self.prof.copy(), title='RadialProfile' )
             self.prof = self.dm_prof.GetNumArray()
             
-            # Make CTF object.
-            kv = DM.Py_Microscope().GetHighTension()/1000
-            self.i_scale = Fourier.calculate_scale( self.data.copy(), x_scale )
-            self.ctf = import_ctf( self.fft.copy(), 200, self.i_scale )
-            
             # Set scale in DM image.
-            self.dm_fft.SetDimensionScale( 0, self.i_scale )
-            self.dm_fft.SetDimensionScale( 1, self.i_scale )
             self.dm_prof.SetDimensionScale( 0, self.i_scale )
             self.dm_prof.SetDimensionUnitString( 0, ('1/' + scale_unit) )
-            self.dm_fft.SetDimensionUnitString( 0, ('1/' + scale_unit) )
-            self.dm_fft.SetDimensionUnitString( 1, ('1/' + scale_unit) )
+            
             
             # Show images and move them to right of source image.
-            self.dm_fft.ShowImage()
             self.dm_prof.ShowImage()
             self.line_plot = (self.dm_prof.GetImageDisplay(0)).GetLinePlotImageDisplay()
             self.line_plot.SetContrastLimits( -0.2, 1.0)
@@ -138,22 +90,10 @@ class imageListener( DM.Py_ScriptObject ):
         size = doc_window.GetFrameSize()
         position = doc_window.GetFramePosition()
         # FFT location
-        fft_doc = self.dm_fft.GetOrCreateImageDocument()
-        fft_window = fft_doc.GetWindow()
-        fft_window.SetFramePosition(size[0], position[1])
-        fft_window.SetFrameSize( int(size[1]/2), int(size[1]/2) )
-        fft_disp = self.dm_fft.GetImageDisplay(0)
-        try:
-            fft_disp.ImageDisplaySetInputColorTable( 'Viridis' )
-        except:
-            print('\nCould not set colour table.')
-        # Profile location
-        size = fft_window.GetFrameSize()
-        position = fft_window.GetFramePosition()
         prof_doc = self.dm_prof.GetOrCreateImageDocument()
         prof_window = prof_doc.GetWindow()
-        prof_window.SetFramePosition(position[0], size[1])
-        prof_window.SetFrameSize( size[0], size[0] )
+        prof_window.SetFramePosition(size[0], position[1])
+        prof_window.SetFrameSize( int(size[1]/2), int(size[1]/2) )
         return
     
     
@@ -209,24 +149,12 @@ class imageListener( DM.Py_ScriptObject ):
                 
                 #Get the data from the ROI area as a numpy array.
                 self.data = self.imgref.GetNumArray()[int(val):int(val3),int(val2):int(val4)]
+                self.temp = Fourier.log_mod( self.data.copy() )
+                #self.temp[:], _, _ = Fourier.remove_bckg( self.temp.copy(), 8, 10 )
+                self.prof[:], _ = Profile.radial_profile( self.temp.copy().astype(np.float64), len(self.data[0])/2, len(self.data[0])/2 )
                 
-                #Process the data and place in the result arrays.
-                #self.result_data[:, :] = self.data.copy()# = self.ROI_process( self.data )
-                
-                
-                temp = Fourier.log_mod( Fourier.imfft( self.data.copy() ))
-                #self.fft[:] = Fourier.binned_imfft( temp.copy(), self.x_scale, self.binning_factor, 'nocalc' )
-                self.fft[:] = Fourier.crop( temp.copy(), len(self.fft[0]) )
-                #self.fft[:], _, _ = Fourier.remove_bckg( self.fft.copy(), 8, 10 )
-                
-                self.prof[:], _ = Profile.radial_profile( self.fft.copy(), len(self.fft[0])/2, len(self.fft[0])/2 )
-                
-                #self.dm_fft.UpdateImage()
                 self.dm_prof.UpdateImage()
                 self.line_plot.SetContrastLimits( -0.2, 1.0)
-                
-                #Increment an index each time data is processed.
-                #self.i = self.i+1
         except:
             print(traceback.format_exc())
         return
