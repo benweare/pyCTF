@@ -2,57 +2,16 @@
 Live defocus measurement.
 
 A script to measure the defocus live on the 2100F, using PyCTF in 
-DigitalMicrograph
+DigitalMicrograph.
 
-For use with DM, do make sure use numpy 1.23.5 and do not update.
-
-Must not use Numba and JIT as DM hangs.
+For use with DM, do make sure to use Numpy 1.23.5 and do not update.
 
 'ctrl + shift + q' to kill scripts running on background thread.
 
-Note: currently scales poorly as FFT-intensive.
-USe hybdrid scripting to speed up the DM FFTs
-'''
-
-'''
-    # Precomputing values to speed up.
-    def fast_remove_bckg( self, image ):
-        
-        # low frequency
-        imfft = np.fft.fft2( image )
-        imfft = np.fft.fftshift( imfft )
-        imfft = imfft * self.mask1
-        imfft = np.fft.ifft2( imfft )
-        LF_bkg = np.abs( imfft )
-        image = image - np.abs( imfft )
-
-        # high frequency
-        imfft = np.abs( image ) #natural log
-        imfft = np.fft.fft2( imfft)
-        imfft = np.fft.fftshift( imfft )
-        imfft = imfft * self.mask2
-        imfft = np.exp( np.abs(np.fft.ifft2( imfft )) )
-        image = image / imfft
-        return image
-
-    # Precompute iradius and masks
-            rstart1 = 8
-            rstart2 = 10
-            self.iradius, _ = pyCTF.utils.find_iradius_itheta( self.data.copy(), 1 )
-            n = range(0, np.size(self.iradius,0))
-            m = range(0, np.size(self.iradius,1))
-            self.mask1 = np.ones( self.data.shape )
-            for i in n:
-                for j in m:
-                    if self.iradius[i,j] >= rstart1:
-                        self.mask1[i,j] = 0
-                        
-            self.mask2 = np.ones( self.data.shape )
-            
-            for i in n:
-                for j in m:
-                    if self.iradius[i,j] >= rstart2:
-                        self.mask2[i,j] = 0
+Notes:
+- Runs well up to 1K resolution, 10 fps & 20 fps.
+- Noticable slowdown at 2K, 10 fps.
+- Main limit is number of pixels in the ROI.
 '''
 
 import numpy as np
@@ -74,33 +33,6 @@ from pyCTF.profile import Profile
 #config.DISABLE_JIT = False
 
 
-# Calculate the FFT scale.
-def _calc_scale( image, scale ):
-    iscale = 1/( len(image[0]) * scale )
-    return iscale
-
-# Calculate how to much to bin the FFT.
-def _calc_bin_factor( pixel_size, target_nyquist ):
-    nyquist = 1/pixel_size
-    binning_factor = nyquist / target_nyquist
-    return binning_factor
-
-def _bin_array(data, binstep=2, binsize=2, func=np.sum):
-    # Function to bin array with numpy. Default is 2x binning.
-    # See: https://stackoverflow.com/questions/21921178/binning-a-numpy-array/42024730#42024730
-    axes = [0, 1]
-    data = np.array(data)
-    dims = np.array(data.shape)
-    for axis in axes:
-        argdims = np.arange(data.ndim)
-        argdims[0], argdims[axis]= argdims[axis], argdims[0]
-        data = data.transpose(argdims)
-        data = [func(np.take(data,np.arange(int(i*binstep),int(i*binstep+binsize)),0),0) for i in np.arange(dims[axis]/binstep)]
-        data = np.array(data).transpose(argdims)
-    return data
-
-
-
 class imageListener( DM.Py_ScriptObject ):
     '''
     Image listener class.
@@ -112,8 +44,6 @@ class imageListener( DM.Py_ScriptObject ):
     # Constructor.
     def __init__( self, img ):
         try:
-            # Create an index that is incremented each time data is processed.
-            self.i = 0
             # Get the original image and assign it to self.imgref.
             self.imgref = img
             
@@ -121,35 +51,42 @@ class imageListener( DM.Py_ScriptObject ):
             self.roi = DM.GetROIFromID(self.find_ROI(self.imgref))
             val, val2, val3, val4 = self.roi.GetRectangle()
             self.data = self.imgref.GetNumArray()[int(val):int(val3),int(val2):int(val4)]
+
             # Get the shape and calibration of the original image.
             (input_sizex, input_sizey) = self.data.shape
             origin, x_scale, scale_unit =  self.imgref.GetDimensionCalibration(1, 0)
-            self.x_scale = x_scale
             
             # Calculate the binning factor for the target frequency.
-            self.binning_factor = Fourier.calculate_bin_factor( len(self.data[0]), x_scale, 3.0 )
+            #self.binning_factor = Fourier.calculate_bin_factor( len(self.data[0]), x_scale, 3.0 )
             
-            # CTF variables.
-            self.fft = Fourier.imfft( self.data.copy() )
-            #self.fft = Fourier.binned_imfft( self.data.copy(), self.x_scale, self.binning_factor, 'nocalc' )
-            #self.temp = self.fft.copy()
+            # Create the Fourier transform, then crop to size and make a DM image.
+            self.fft = Fourier.log_mod( Fourier.imfft( self.data ))
             self.fft = Fourier.crop( self.fft.copy(), len(self.fft[0])/4 )
             self.fft = Fourier.log_mod( self.fft )
-            self.fft, _, _ = Fourier.remove_bckg( self.fft, 8, 10 )
+
+            # Precompute iradius for background subtraction.
+            kV = DM.Py_Microscope().GetHighTension()/1000
+            self.iradius, _ = pyCTF.utils.find_iradius_itheta( self.fft.copy(), 1 )
+
+            # Precompute image masks for live background subtraction.
+            self.lf_mask = self._create_masks( 8, self.iradius )
+            self.hf_mask = self._create_masks( 10, self.iradius )
+
+            # Initial background removal.
+            self.fft[:] = self._remove_bckg( self.fft.copy() )
             self.dm_fft = self._np_array_to_dm_image( self.fft, title='FFT' )
+            # Make a ref to the image data so can update the image live.
             self.fft = self.dm_fft.GetNumArray()
-            self.dm_fft.ShowImage()
             
-            self.prof, _ = Profile.radial_profile( self.fft.copy(), len(self.fft[0])/2, len(self.fft[0])/2 )
+            # Create the radial profile for the Fourier transform.
+            self.r, self.nr = self._profile_precompute( self.fft, len(self.fft[0])/2, len(self.fft[0])/2 )
+            self.prof = self._fast_profile( self.fft )
             self.dm_prof = self._np_array_to_dm_image( self.prof.copy(), title='RadialProfile' )
             self.prof = self.dm_prof.GetNumArray()
             
-            # Make CTF object.
-            kv = DM.Py_Microscope().GetHighTension()/1000
-            self.i_scale = Fourier.calculate_scale( self.data.copy(), x_scale )
-            self.ctf = import_ctf( self.fft.copy(), 200, self.i_scale )
             
-            # Set scale in DM image.
+            # Set scale of the DigitalMicrograph images.
+            self.i_scale = Fourier.calculate_scale( self.data, x_scale )
             self.dm_fft.SetDimensionScale( 0, self.i_scale )
             self.dm_fft.SetDimensionScale( 1, self.i_scale )
             self.dm_prof.SetDimensionScale( 0, self.i_scale )
@@ -157,10 +94,16 @@ class imageListener( DM.Py_ScriptObject ):
             self.dm_fft.SetDimensionUnitString( 0, ('1/' + scale_unit) )
             self.dm_fft.SetDimensionUnitString( 1, ('1/' + scale_unit) )
             
-            # Show images and move them to right of source image.
+            # Show the images and move them to right of source image.
             self.dm_fft.ShowImage()
             self.dm_prof.ShowImage()
-            self.line_plot = (self.dm_prof.GetImageDisplay(0)).GetLinePlotImageDisplay()
+            self.prof_img_display = self.dm_prof.GetImageDisplay(0)
+            self.line_plot = self.prof_img_display.GetLinePlotImageDisplay()
+            #self.line_plot.SetFilled( False )
+            #self.line_plot.SetSliceComponentColor( 0, 0, 0, 0 ,0 )
+            self.line_plot.SetSliceDrawingStyle( 0, 3 )
+            self.line_plot.SetGridColor( 99, 99, 99 )
+            self.line_plot.SetDoAutoSurvey( False, False )
             self.line_plot.SetContrastLimits( -0.2, 1.0)
             self._set_window_postion()
             
@@ -170,7 +113,52 @@ class imageListener( DM.Py_ScriptObject ):
         except:
             print( traceback.format_exc() )
         return
+
+
+    def _profile_precompute( self, data, centX, centY ):
+        y, x = np.indices( data.shape )
+        r = np.sqrt( np.square(x - centX) + np.square(y - centY) )
+        r = r.astype( np.int64 )
+        nr = np.bincount( r.ravel() )
+        return r, nr
+
+    # Uses precompute to speed up.
+    def _fast_profile( self, data ):
+        tbin = np.bincount( self.r.ravel(), data.ravel() )
+        radialprofile = tbin / self.nr
+        return radialprofile
+
+    # Remove background via Fourier method but with values precomputed.
+    def _remove_bckg( self, image ):
+        # low frequency
+        imfft = np.fft.fft2( image )
+        imfft = np.fft.fftshift( imfft )
+        imfft = imfft * self.lf_mask
+        imfft = np.fft.ifft2( imfft )
+        LF_bkg = np.abs( imfft )
+        image = image - np.abs( imfft )
+        # high frequency
+        imfft = np.abs( image ) #natural log
+        imfft = np.fft.fft2( imfft)
+        imfft = np.fft.fftshift( imfft )
+        imfft = imfft * self.hf_mask
+        imfft = np.exp( np.abs(np.fft.ifft2( imfft )) )
+        image = image / imfft
+        return image
+
+
+    # Compute masks for backfround subtraction.
+    def _create_masks( self, start_radius, iradius ):
+        n = range(0, np.size(iradius,0))
+        m = range(0, np.size(iradius,1))
+        mask = np.ones( self.fft.shape )
+        for i in n:
+            for j in m:
+                if iradius[i,j] >= start_radius:
+                    mask[i,j] = 0
+        return mask
     
+
     # Set the position of the new windows in DM.
     def _set_window_postion( self ):
         # Front image location
@@ -245,26 +233,23 @@ class imageListener( DM.Py_ScriptObject ):
         '''
         try:
             if not self.stop:
-                #Get an (updated) ROI position
+                # Get an updated ROI position.
                 val, val2, val3, val4 = self.roi.GetRectangle()
                 
-                #Get the data from the ROI area as a numpy array.
+                # Get the data from the ROI area as a numpy array.
                 self.data = self.imgref.GetNumArray()[int(val):int(val3),int(val2):int(val4)]
+
+                # Store the FFT before it is cropped to the right size.
+                temp = Fourier.log_mod( Fourier.imfft( self.data ))
+                # Process the Fourier transform and line profile.
+                self.fft[:] = Fourier.crop( temp, len(self.fft[0]) )
+                self.fft[:] = self._remove_bckg( self.fft )
+                self.prof[:] = self._fast_profile( self.fft )
                 
-                #Process the data and place in the result arrays.
-                #self.result_data[:, :] = self.data.copy()# = self.ROI_process( self.data )
-                
-                
-                temp = Fourier.log_mod( Fourier.imfft( self.data.copy() ))
-                #self.fft[:] = Fourier.binned_imfft( temp.copy(), self.x_scale, self.binning_factor, 'nocalc' )
-                self.fft[:] = Fourier.crop( temp.copy(), len(self.fft[0]) )
-                #self.fft[:], _, _ = Fourier.remove_bckg( self.fft.copy(), 8, 10 )
-                
-                self.prof[:], _ = Profile.radial_profile( self.fft.copy(), len(self.fft[0])/2, len(self.fft[0])/2 )
-                
-                #self.dm_fft.UpdateImage()
+                # Update the live images.
+                self.dm_fft.UpdateImage()
                 self.dm_prof.UpdateImage()
-                self.line_plot.SetContrastLimits( -0.2, 1.0)
+                
                 
                 #Increment an index each time data is processed.
                 #self.i = self.i+1
