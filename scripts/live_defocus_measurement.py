@@ -28,6 +28,9 @@ from pyCTF.image import ElectronImage
 from pyCTF.image import import_ctf
 from pyCTF.fourier import Fourier
 from pyCTF.profile import Profile
+from pyCTF.zeros import Zeros
+
+from pyCTF.utils import kv_to_lamb
 
 #from numba import jit, config
 #config.DISABLE_JIT = False
@@ -63,9 +66,14 @@ class imageListener( DM.Py_ScriptObject ):
             self.fft = Fourier.log_mod( Fourier.imfft( self.data ))
             self.fft = Fourier.crop( self.fft.copy(), len(self.fft[0])/4 )
             self.fft = Fourier.log_mod( self.fft )
+            
+            # Use center to mask out DC frequencies from live transform.
+            self.fft_center = int( len(self.fft[0])/2 )
 
-            # Precompute iradius for background subtraction.
-            kV = DM.Py_Microscope().GetHighTension()/1000
+            # Set up CTF object and precompute iradius for background subtraction.
+            self.kV = DM.Py_Microscope().GetHighTension()/1000
+            i_scale = Fourier.calculate_scale( self.data, x_scale )
+            self.lamb = kv_to_lamb( self.kV )
             self.iradius, _ = pyCTF.utils.find_iradius_itheta( self.fft.copy(), 1 )
 
             # Precompute image masks for live background subtraction.
@@ -78,6 +86,11 @@ class imageListener( DM.Py_ScriptObject ):
             # Make a ref to the image data so can update the image live.
             self.fft = self.dm_fft.GetNumArray()
             
+            # Calculate how target length of radial profile.
+            #self.max_frequency = int( 1.5/i_scale )
+            #if self.max_frequency > len(self.fft[0]):
+            #    self.max_frequency = len(self.fft[0])
+            
             # Create the radial profile for the Fourier transform.
             self.r, self.nr = self._profile_precompute( self.fft, len(self.fft[0])/2, len(self.fft[0])/2 )
             self.prof = self._fast_profile( self.fft )
@@ -86,10 +99,9 @@ class imageListener( DM.Py_ScriptObject ):
             
             
             # Set scale of the DigitalMicrograph images.
-            self.i_scale = Fourier.calculate_scale( self.data, x_scale )
-            self.dm_fft.SetDimensionScale( 0, self.i_scale )
-            self.dm_fft.SetDimensionScale( 1, self.i_scale )
-            self.dm_prof.SetDimensionScale( 0, self.i_scale )
+            self.dm_fft.SetDimensionScale( 0, i_scale )
+            self.dm_fft.SetDimensionScale( 1, i_scale )
+            self.dm_prof.SetDimensionScale( 0, i_scale )
             self.dm_prof.SetDimensionUnitString( 0, ('1/' + scale_unit) )
             self.dm_fft.SetDimensionUnitString( 0, ('1/' + scale_unit) )
             self.dm_fft.SetDimensionUnitString( 1, ('1/' + scale_unit) )
@@ -104,7 +116,7 @@ class imageListener( DM.Py_ScriptObject ):
             self.line_plot.SetSliceDrawingStyle( 0, 3 )
             self.line_plot.SetGridColor( 99, 99, 99 )
             self.line_plot.SetDoAutoSurvey( False, False )
-            self.line_plot.SetContrastLimits( -0.2, 1.0)
+            self.line_plot.SetContrastLimits( -0.5, 0.5)
             self._set_window_postion()
             
             DM.Py_ScriptObject.__init__(self)
@@ -145,6 +157,29 @@ class imageListener( DM.Py_ScriptObject ):
         imfft = np.exp( np.abs(np.fft.ifft2( imfft )) )
         image = image / imfft
         return image
+
+    '''
+    # Function to handle measuring the defocus using ctf object.
+    def _measure_defocus( self, data ):
+        try:
+            minima = scipy.signal.find_peaks( -data )
+            # Filter out bad points.
+            #minima = np.array([x for x in minima if freq[x] <= xlim[1]])
+            #minima = np.array([x for x in minima if freq[x] >= xlim[0]])
+            #minima = np.array([x for x in minima if prof[x] <= ylim[1]])
+            #minima = np.array([x for x in minima if prof[x] >= ylim[0]])
+            x_min = ( freq[ minima ] )**2
+            # Fit Cs and defocus using numpy method.
+            m, c, cov = pyCTF.utils.fit( x_min, y_min, self.lamb )
+            self.Cs, self.defocus = pyCTF.utils.calc_cs_and_defocus( m, c, self.lamb )
+            print('\r Defocus = ' + str(self.ctf.defocus) )
+        except:
+            print('\r Could not fit defocus.')
+            ctf.Cs = 0
+            ctf.defocus = 0
+        return
+    '''
+
 
 
     # Compute masks for backfround subtraction.
@@ -244,7 +279,10 @@ class imageListener( DM.Py_ScriptObject ):
                 # Process the Fourier transform and line profile.
                 self.fft[:] = Fourier.crop( temp, len(self.fft[0]) )
                 self.fft[:] = self._remove_bckg( self.fft )
-                self.prof[:] = self._fast_profile( self.fft )
+                self.fft[ self.fft_center, self.fft_center] = 0
+                self.prof[:] = self._fast_profile( self.fft )*2
+                #baseline = Profile.remove_baseline( self.prof )
+                #self.prof[:] = Profile.smooth_profile( (self.prof-baseline), 20, 5 )
                 
                 # Update the live images.
                 self.dm_fft.UpdateImage()
