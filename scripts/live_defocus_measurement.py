@@ -12,6 +12,7 @@ Notes:
 - Runs well up to 1K resolution, 10 fps & 20 fps.
 - Noticable slowdown at 2K, 10 fps.
 - Main limit is number of pixels in the ROI.
+- Taking an image will end the script.
 '''
 
 import numpy as np
@@ -86,14 +87,13 @@ class imageListener( DM.Py_ScriptObject ):
             # Make a ref to the image data so can update the image live.
             self.fft = self.dm_fft.GetNumArray()
             
-            # Calculate how target length of radial profile.
-            #self.max_frequency = int( 1.5/i_scale )
-            #if self.max_frequency > len(self.fft[0]):
-            #    self.max_frequency = len(self.fft[0])
+            # Calculate the frequency to crop the radial profile to.
+            self.max_freq= int( 2.0/i_scale )
             
             # Create the radial profile for the Fourier transform.
             self.r, self.nr = self._profile_precompute( self.fft, len(self.fft[0])/2, len(self.fft[0])/2 )
             self.prof = self._fast_profile( self.fft )
+            self.prof = self.prof[:self.max_freq]
             self.dm_prof = self._np_array_to_dm_image( self.prof.copy(), title='RadialProfile' )
             self.prof = self.dm_prof.GetNumArray()
             
@@ -280,9 +280,10 @@ class imageListener( DM.Py_ScriptObject ):
                 self.fft[:] = Fourier.crop( temp, len(self.fft[0]) )
                 self.fft[:] = self._remove_bckg( self.fft )
                 self.fft[ self.fft_center, self.fft_center] = 0
-                self.prof[:] = self._fast_profile( self.fft )*2
+                temp = self._fast_profile( self.fft )*2
+                self.prof[:] = temp[:self.max_freq]
                 #baseline = Profile.remove_baseline( self.prof )
-                #self.prof[:] = Profile.smooth_profile( (self.prof-baseline), 20, 5 )
+                self.prof[:] = Profile.smooth_profile( self.prof, 10, 5 )
                 
                 # Update the live images.
                 self.dm_fft.UpdateImage()
