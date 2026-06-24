@@ -13,6 +13,7 @@ Notes:
 - Noticable slowdown at 2K, 10 fps.
 - Main limit is number of pixels in the ROI.
 - Taking an image will end the script.
+- Update so the calibration changes if the mag changes.
 '''
 
 import numpy as np
@@ -65,7 +66,7 @@ class imageListener( DM.Py_ScriptObject ):
             
             # Create the Fourier transform, then crop to size and make a DM image.
             self.fft = Fourier.log_mod( Fourier.imfft( self.data ))
-            self.fft = Fourier.crop( self.fft.copy(), len(self.fft[0])/4 )
+            self.fft = Fourier.crop( self.fft.copy(), len(self.fft[0])/2 )
             self.fft = Fourier.log_mod( self.fft )
             
             # Use center to mask out DC frequencies from live transform.
@@ -91,12 +92,17 @@ class imageListener( DM.Py_ScriptObject ):
             self.max_freq= int( 2.0/i_scale )
             
             # Create the radial profile for the Fourier transform.
-            self.r, self.nr = self._profile_precompute( self.fft, len(self.fft[0])/2, len(self.fft[0])/2 )
+            self.r, self.nr = self._profile_precompute( self.fft, len(self.fft[0])/2, len(self.fft[0])/4 )
             self.prof = self._fast_profile( self.fft )
             self.prof = self.prof[:self.max_freq]
             self.dm_prof = self._np_array_to_dm_image( self.prof.copy(), title='RadialProfile' )
             self.prof = self.dm_prof.GetNumArray()
             
+            # Make a buffer to store the last 10 frames.
+            self.buffer = np.zeros( (self.prof.shape[0], 10) )
+            self.i = 0
+            print(self.buffer.shape)
+            print(self.prof.shape)
             
             # Set scale of the DigitalMicrograph images.
             self.dm_fft.SetDimensionScale( 0, i_scale )
@@ -289,9 +295,15 @@ class imageListener( DM.Py_ScriptObject ):
                 self.dm_fft.UpdateImage()
                 self.dm_prof.UpdateImage()
                 
+                # Update the buffer.
+                self.buffer[:, self.i] = self.prof[:]
+                if self.i == 9:
+                    self.i = 0
+                else:
+                    self.i = self.i+1
                 
                 #Increment an index each time data is processed.
-                #self.i = self.i+1
+                
         except:
             print(traceback.format_exc())
         return
