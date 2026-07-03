@@ -11,6 +11,8 @@ from pyCTF.utils import kv_to_lamb
 from pyCTF.utils import LensAberrations
 from pyCTF.utils import LineProfiles
 from pyCTF.utils import normalise_data_range
+from pyCTF.utils import find_iradius_itheta
+from pyCTF.utils import make_scalebar
 
 
 class CTFSimulation2D:
@@ -91,13 +93,14 @@ class CTFSimulation2D:
         self.image_size = image_size
         self.flim = flim * 1e9
         self.defocus = defocus * 1e-9
-        self.scale = self.image_size / self.flim
+        self.scale = self.flim / self.image_size
         ## images ##
         self.imageX = image_size
         self.imageY = image_size
         self.CTF = np.ones(( self.imageX, self.imageY ))
         self.cent = np.array([ self.CTF.shape[0] / 2.0, self.CTF.shape[0] ]) 
-        self.iradius, self.itheta = self.__find_radial_distance( )
+        self.iradius, self.itheta = find_iradius_itheta( self.CTF, self.scale )
+        #self.iradius, self.itheta = self._find_radial_distance( )
         ## simulations ##
         self.update()
 
@@ -110,10 +113,10 @@ class CTFSimulation2D:
         -----
         Call after changing class attributes to re-simulate CTF.
         '''
-        self.CTF = self.__simulate_2D_CTF_stigmated()
-        self.aperture = self.__aperture_function()
-        self.temporal = self.__temporal_coherence( self.temporal_mode )
-        self.spatial = self.__spatial_coherence()
+        self.CTF = self._simulate_2D_CTF_stigmated()
+        self.aperture = self._aperture_function()
+        self.temporal = self._temporal_coherence( self.temporal_mode )
+        self.spatial = self._spatial_coherence()
         self.damped_CTF = self.CTF * self.temporal * self.spatial * self.aperture
         self.square_CTF = self.damped_CTF**2
         self.square_CTF = normalise_data_range( self.square_CTF )
@@ -122,7 +125,7 @@ class CTFSimulation2D:
 
     # Find radial distance and angle for each pixel in the image.
     # Note, update to use the corresponding function in misc.
-    def __find_radial_distance( self ):
+    def _find_radial_distance( self ):
         irow, icol = np.indices(self.CTF.shape)
         centX = irow - self.CTF.shape[0] / 2.0
         centY = icol - self.CTF.shape[1] / 2.0
@@ -134,7 +137,7 @@ class CTFSimulation2D:
 
 
     # Simulates 2D CTF.
-    def __simulate_2D_CTF_stigmated( self ):
+    def _simulate_2D_CTF_stigmated( self ):
         CTF = np.sin( (np.pi*self.defocus*self.lamb*(self.iradius**2) )+\
                       (0.5*np.pi*self.Cs*(self.lamb**3)*(self.iradius**4))+\
                       np.pi*self.lamb*(self.iradius**2)*0.5*((self.C12a + self.C12b)+\
@@ -143,7 +146,7 @@ class CTFSimulation2D:
     
 
     # Calculate focal spread. W&C p.471.
-    def __calculate_focal_spread( self, mode ):
+    def _calculate_focal_spread( self, mode ):
         try:
             if mode == 1:
                 # Objective current instability.
@@ -161,15 +164,15 @@ class CTFSimulation2D:
 
 
     # Model of temporal coherence envelope.
-    def __temporal_coherence( self, mode ):
-        delta = self.__calculate_focal_spread( mode )
+    def _temporal_coherence( self, mode ):
+        delta = self._calculate_focal_spread( mode )
         delta = self.Cc * ( self.focal_spread / ( self.kV * 1000 ))
         Et2d = np.exp( -0.25*(( np.pi* self.lamb * delta)**2) * ( self.iradius**4 ) )
         return Et2d
     
 
     # Model of spatial coherence envelope.
-    def __spatial_coherence( self ):
+    def _spatial_coherence( self ):
         preexp = ((np.pi*self.beta)/self.lamb)**2
         dChi_2d = ((self.Cs*(self.lamb**3)*(self.iradius**3)\
             +(self.defocus*self.lamb*self.iradius) ))**2
@@ -178,7 +181,7 @@ class CTFSimulation2D:
     
 
     # Model of aperture function.
-    def __aperture_function( self ):
+    def _aperture_function( self ):
         aperture_2d = np.ones(( self.imageX, self.imageY ))
         n = range(0, len(aperture_2d[0] ))
         m = range(0, len(aperture_2d[1] ))
@@ -191,7 +194,7 @@ class CTFSimulation2D:
         return aperture_2d
         
 
-    def plot_ctf( self ):
+    def plot_ctf( self, cmap='cividis', val=1.0 ):
         '''
         Plot the 2D CTF.
 
@@ -203,12 +206,16 @@ class CTFSimulation2D:
             Matplotlib axis.
         '''
         fig, ax = plt.subplots(1,1)
-        cax = ax.matshow( self.square_CTF, cmap='grey')   
+        cax = ax.matshow( self.square_CTF, cmap=cmap)   
         ax.set_xticks([])
         ax.set_yticks([]) 
         # Note: fix max extent of colorbar.
-        cbar = fig.colorbar( mappable=cax )#, ticks=[0,0.5,0.99] )
-        #cbar.ax.set_yticklabels(['0.0', '0.5', '0.99'])
+        cbar = fig.colorbar( mappable=cax )
+        try:
+            scalebar = make_scalebar( val, (self.scale/1e9), ax )
+            ax.add_artist(scalebar)
+        except:
+            print('Error: could not add scalebar to image.')
         return
     
 
@@ -226,7 +233,7 @@ class CTFSimulation2D:
         return
 
 
-    def show_all( self, **kwargs ):
+    def show_all( self, cmap='cividis' ):
         '''
         Plot all simulated arrays.
 
@@ -237,16 +244,16 @@ class CTFSimulation2D:
         spatial coherence function. Uses plt.subplots with ax.matshow.
         '''
         fig, axs = plt.subplots(2, 3)
-        axs[0, 0].matshow( self.CTF, cmap='grey' )
-        axs[0, 1].matshow( self.damped_CTF, cmap='grey' )
-        axs[0, 2].matshow( self.square_CTF, cmap='grey' )
-        axs[1, 0].matshow( self.aperture, cmap='grey' )
-        axs[1, 1].matshow( self.temporal, cmap='grey' )
-        axs[1, 2].matshow( self.spatial, cmap='grey' )
+        axs[0, 0].matshow( self.CTF, cmap=cmap )
+        axs[0, 1].matshow( self.damped_CTF, cmap=cmap )
+        axs[0, 2].matshow( self.square_CTF, cmap=cmap )
+        axs[1, 0].matshow( self.aperture, cmap=cmap )
+        axs[1, 1].matshow( self.temporal, cmap=cmap )
+        axs[1, 2].matshow( self.spatial, cmap=cmap )
 
         a = [axs[0,0],axs[0,1],axs[0,2],axs[1,0],axs[1,1],axs[1,2]]
         titles = ['CTF', 'Damped CTF', 'Square CTF', 'Aperture function',\
-        'Temporal coherence','Spatial coherence']
+        'Temporal envelope','Spatial envelope']
 
         n = 0
         for ax in a:
@@ -330,12 +337,12 @@ class CTFSimulation1D:
         self.fno = fno
         #self.cutoff = flim * 1e9
         self.defocus = defocus * 1e-9
-        self.frequency = self.__calculateFrequencyRange()
-        self.CTF = self.__calculate_CTF()
-        self.aperture = self.__aperture_function( )
+        self.frequency = self._calculateFrequencyRange()
+        self.CTF = self._calculate_CTF()
+        self.aperture = self._aperture_function( )
         self.temporal_mode = kwargs.get('mode', 0)
-        self.temporal = self.__temporal_coherence( self.temporal_mode )
-        self.spatial= self.__spatial_coherence( )
+        self.temporal = self._temporal_coherence( self.temporal_mode )
+        self.spatial= self._spatial_coherence( )
         self.damped_CTF = self.CTF * self.temporal * self.spatial * self.aperture
         self.square_CTF = self.damped_CTF**2
 
@@ -359,18 +366,18 @@ class CTFSimulation1D:
         -----
         Call method after changing class attributes to update simulation.
         '''
-        self.frequency = self.__calculateFrequencyRange()
-        self.CTF = self.__calculate_CTF()
-        self.aperture = self.__aperture_function()
-        self.temporal = self.__temporal_coherence( self.temporal_mode )
-        self.spatial= self.__spatial_coherence()
+        self.frequency = self._calculateFrequencyRange()
+        self.CTF = self._calculate_CTF()
+        self.aperture = self._aperture_function()
+        self.temporal = self._temporal_coherence( self.temporal_mode )
+        self.spatial= self._spatial_coherence()
         self.damped_CTF = self.CTF * self.temporal * self.spatial * self.aperture
         self.square_CTF = self.damped_CTF**2
         return
 
 
     # Calculates the frequency array for CTF simulation.
-    def __calculateFrequencyRange( self ):
+    def _calculateFrequencyRange( self ):
         frequency = [0 for _ in range(self.fno)]
         n = range(0, self.fno)
         for i in n:
@@ -380,7 +387,7 @@ class CTFSimulation1D:
     
 
     # Models the 1D CTF.
-    def __calculate_CTF( self ):
+    def _calculate_CTF( self ):
         CTF = [0 for _ in range( self.fno )]
         n = range(0, self.fno)
         for i in n:
@@ -393,7 +400,7 @@ class CTFSimulation1D:
 
 
     # Models the aperture function.
-    def __aperture_function( self ):
+    def _aperture_function( self ):
         '''
         Calculate 1D aperture function.
         '''
@@ -408,7 +415,7 @@ class CTFSimulation1D:
 
 
     # Calculate focal spread. W&C p.471.
-    def __calculate_focal_spread( self, mode ):
+    def _calculate_focal_spread( self, mode ):
         try:
             if mode == 1:
                 # Objective current instability.
@@ -428,11 +435,11 @@ class CTFSimulation1D:
 
     # Models the temporal coherence envelope.
     # Update to use physical quants.
-    def __temporal_coherence( self, mode ):
+    def _temporal_coherence( self, mode ):
         V = self.kV * 1000
         Et = np.zeros(len(self.CTF))
         n = range(0, len( Et ))
-        delta = self.__calculate_focal_spread( mode )
+        delta = self._calculate_focal_spread( mode )
         for i in n:
             f = float( self.flim*( i / self.fno ))
             Et[i] = np.exp( -0.25*(( np.pi* self.lamb * delta)**2) * f**4)
@@ -441,7 +448,7 @@ class CTFSimulation1D:
 
     # Models the spatial coherence envelope.
     # W&C p. 471
-    def __spatial_coherence( self ):
+    def _spatial_coherence( self ):
         Es = np.zeros(len( self.CTF ))
         dChi = np.zeros(len( self.CTF ))
         n = range(0, len( Es ))
@@ -500,9 +507,10 @@ class CTFSimulation1D:
         ax.legend()
         ax.set_ylabel('Intensity', fontsize = 16)
         ax.set_xlabel('Frequency / nm$^{-1}$', fontsize = 16)
+        ax.set_xlim([0, self.flim*1e-9])
         ax.set_box_aspect(1)
         fig.tight_layout()
-        return
+        return fig, ax
 
 
     def show_all( self ):
@@ -530,7 +538,7 @@ class CTFSimulation1D:
         axs[1, 2].set_ylim([0,1.01])
         a = [axs[0,0],axs[0,1],axs[0,2],axs[1,0],axs[1,1],axs[1,2]]
         titles = ['CTF', 'Damped CTF', 'Square CTF', 'Aperture function',\
-        'Temporal coherence','Spatial coherence']
+        'Temporal envelope','Spatial envelope']
         n = 0
         for ax in a:
             #ax.set_xticks([])

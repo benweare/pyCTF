@@ -264,7 +264,7 @@ class ElectronImage:
         return
 
 
-    def plot_background( self ):
+    def plot_background( self, cmap='cividis' ):
         '''
         Plot results of Fourier background removal.
 
@@ -274,13 +274,13 @@ class ElectronImage:
         background, and the envelope background.
         '''
         fig, axs = plt.subplots(1, 3, figsize=(8,8))
-        axs[0].matshow( self.image )
-        axs[1].matshow( self.LF_bkg )
-        axs[2].matshow( self.E_bkg )
+        axs[0].matshow( self.image, cmap=cmap )
+        axs[1].matshow( self.LF_bkg, cmap=cmap )
+        axs[2].matshow( self.E_bkg, cmap=cmap )
 
-        axs[0].set_title( 'Background subtracted' )
+        axs[0].set_title( 'Background removed' )
         axs[1].set_title( 'Low frequency' )
-        axs[2].set_title( 'Envelope' )
+        axs[2].set_title( 'Envelope function' )
 
         axs[0].set_xticks([])
         axs[0].set_yticks([])
@@ -303,7 +303,7 @@ class ElectronImage:
 
 # Extract and process the radial profile of the CTF.
 def _process_profile( ElectronImage, **kwargs ):
-    f_limits = kwargs.get( 'f_limits', [0, ElectronImage.max_freq_inscribed] )
+    flimits = kwargs.get( 'f_limits', [0, ElectronImage.max_freq_inscribed] )
     polynomial = kwargs.get( 'polynomial', 20 )
     window = kwargs.get( 'window', 1 )
     # kwargs to allow astigmatism defocus measurement
@@ -324,12 +324,13 @@ def _process_profile( ElectronImage, **kwargs ):
     freq, _ = Profile.radial_profile( ElectronImage.iradius,
                                     ElectronImage.centX,
                                     ElectronImage.centY )
-    try:
-        cfreq, cprof = Profile.crop_frequency( rprof, freq, f_limits )
-    except:
-        cfreq = freq
-        cprof = rprof
-        print( 'Error: could not crop to frequency range.\n' )
+
+    cfreq, cprof = Profile.crop_frequency( rprof, freq, flimits)
+
+    #except:
+    #    cfreq = freq
+    #    cprof = rprof
+    #    print( 'Error: could not crop to frequency range.\n' )
     baseline = Profile.remove_baseline( cprof )
     sprof = Profile.smooth_profile( ( cprof - baseline ), polynomial, window )
     return rprof, freq, baseline, sprof, cprof, cfreq

@@ -5,13 +5,6 @@ This module contains miscellanous functions used by other  modules
 in the PyCTF package.
 '''
 
-#from numba import jit, config
-
-#from pyCTF.__init__ import enable_jit
-#if enable_jit == True:
-#    config.DISABLE_JIT = True
-#else:
-#    config.DISABLE_JIT = False
 
 import numpy as np
 from numpy.polynomial import polynomial
@@ -19,7 +12,7 @@ from numpy.polynomial import polynomial
 import scipy
 from scipy.constants import( e, c, m_e, h )
 
-#@jit
+
 def scherzer_defocus( input ):
     '''
     Scherzer defocus, in nanometers.
@@ -27,12 +20,14 @@ def scherzer_defocus( input ):
     scherzer = (-4/3) * np.sqrt( input.Cs * input.lamb )
     return scherzer*1e9
 
+
 # Lichte defocus.
 #def lichte_defocus():
 #    lichte = (-3/4) * Cs * (R * lamb**2)
 #    return lichte
 
-#@jit
+
+
 def kv_to_lamb( kV ):
     """
     Calculate accelerating voltage from wavelength.
@@ -62,7 +57,7 @@ def kv_to_lamb( kV ):
     lamb = PT/np.sqrt(PBA+PBB)
     return lamb
 
-#@jit
+
 def normalise_data_range( data, dmin=0, dmax=1 ):
     '''
     Normalise range of array.
@@ -85,6 +80,7 @@ def normalise_data_range( data, dmin=0, dmax=1 ):
     #dmin = kwargs.get('dmin', 0)
     #dmax = kwargs.get('dmax', 1)
     return ((data-np.min(data))/(np.max(data)-np.min(data)))*( dmax - dmin )
+
 
 def baseline_als( y, lam, p, **kwargs ):
     """
@@ -183,8 +179,8 @@ def composite_image( image1, image2, size ):
     return composite
 
 
-# To do: try to get scale from CTF class by default?
-def show_image( image, **kwargs ):
+# TO DO: try to get scale from CTF class by default?
+def show_image( image, cmap='cividis', **kwargs ):
         '''
         Display an image of the CTF.
 
@@ -206,7 +202,7 @@ def show_image( image, **kwargs ):
         norm = kwargs.get('norm', True)
         fig, ax = plt.subplots()
         if norm == True:
-            cax = ax.matshow( normalise_data_range(image) )
+            cax = ax.matshow( normalise_data_range(image), cmap=cmap )
         else:
             cax=ax.matshow( image )
         ax.set_xticks([])
@@ -250,7 +246,7 @@ def make_scalebar( val, scale, ax ):
 
     '''
     from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
-    sizelabel=str( val ) + ' nm-1'
+    sizelabel=str( val ) + ' nm$^{-1}$'
     scalebar = AnchoredSizeBar(ax.transData,
                             (val/scale), sizelabel, 'lower left', 
                             pad=0.1,
@@ -260,7 +256,6 @@ def make_scalebar( val, scale, ax ):
     return scalebar
 
 
-#@jit#(debug=True)
 def find_iradius_itheta( image, scale ):
     '''
     Find the distance from the centre and radial angle of each pixel in an 
@@ -294,12 +289,12 @@ def find_iradius_itheta( image, scale ):
     imageX = image.shape[1] #np.size( image, np.int64(1) )
     imageY = image.shape[0]#np.size( image, 0)
     radius = imageX/2
-    CTF2d = np.ones((imageX,imageY))
+    #CTF2d = np.ones((imageX,imageY))
     irow, icol = np.indices( image.shape )
     centX = irow - image.shape[0] / 2.0
     centY = icol - image.shape[1] / 2.0
     # Distance from centre.
-    iradius = ((centX**2 + centY**2)**0.5) * scale
+    iradius = ((centX**2 + centY**2)**0.5) * scale #TO DO: / or *?
     # Angle from centre.
     itheta = np.arctan2(centX, centY)
     return iradius, itheta
@@ -434,7 +429,6 @@ def fit( x_min, y_min, lamb ):
 
 
 # Calculate the Cs and defocus from the gradient and y-intercept.
-# TO DO: move to utils.
 def calc_cs_and_defocus( m, c, lamb ):
     Cs = m / ( lamb**3 )
     defocus = -c /( -2 * lamb )
@@ -447,7 +441,6 @@ def _create_noise_image( imsize=(100,100), x=100 ):
     return image
 
 
-# line profiles
 class LineProfiles:
     '''
     Class to hold line profiles.

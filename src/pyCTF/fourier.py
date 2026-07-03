@@ -2,15 +2,6 @@
 Module for Fourier-space methods.
 '''
 
-# Requires rocket-fft 0.3.1 on top of numba to handle the FFTs
-#from numba import jit, config
-
-#from pyCTF.__init__ import enable_jit
-#if enable_jit == True:
-#    config.DISABLE_JIT = True
-#else:
-#    config.DISABLE_JIT = False
-
 import numpy as np 
 import matplotlib.pyplot as plt
 
@@ -22,6 +13,7 @@ from pyCTF.utils import find_iradius_itheta
 from pyCTF.utils import normalise_data_range
 
 from pyCTF.profile import Profile
+
 
 class Fourier:
     '''
@@ -184,7 +176,6 @@ class Fourier:
         return FT
         
 
-    #@jit(debug=True)
     def imfft( image ):
         '''
         Fast Fourier transform of a square array.
@@ -209,7 +200,6 @@ class Fourier:
         return FT
 
 
-    #@jit
     def inv_imfft( image ):
         '''
         Inverse fast Fourier transform of a square array.
@@ -228,7 +218,6 @@ class Fourier:
         return imfft
 
 
-    #@jit
     def log_mod( image ):
         '''
         Log-modulus of array.
@@ -252,8 +241,7 @@ class Fourier:
         return logmod
 
 
-    # fix counting stack length
-    #@jit
+    # TO DO: fix counting stack length
     def fft_stack( stack ):
         '''
         2D FFT on each slice in a stack. 
@@ -281,7 +269,6 @@ class Fourier:
         return output
 
 
-    #@jit
     def fft3d( stack ):
         '''
         3DFFT of a stack.
@@ -310,7 +297,7 @@ class Fourier:
 
     # plot views of three axes of 3D FFT
     # unfinished
-    def plot_3d_fft( data ):
+    def plot_3d_fft( data, cmap='cividis' ):
         '''
         Plot 3D FFT.
 
@@ -318,11 +305,11 @@ class Fourier:
         -----
         Unfinished. 
         '''
-        fig, axs = plt.subplots( 1, 2 )
-        axs[0].matshow( data[:, :, 0] )
-        # rotate
-        axs[1].matshow( data )
-        return
+        fig, axs = plt.subplots(1,3)
+        axs[0].imshow(np.sum( arr[:,:,:], 0 ), cmap=cmap)
+        axs[1].imshow(np.sum( arr[:,:,:], 1 ), cmap=cmap)
+        axs[2].imshow(np.sum( arr[:,:,:], 2 ), cmap=cmap)
+        return fig, ax
 
 
     def crop( image, width, **kwargs ):
@@ -635,7 +622,6 @@ class Fourier:
         return FT
 
 
-    #@jit
     def measure_arcs( image, width ):
         '''
         Measure the arcs in the 3D Fourier transform.

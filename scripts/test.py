@@ -30,15 +30,21 @@ def _test_1D_sim():
 	from pyCTF.simulation import CTFSimulation1D
 	import matplotlib.pyplot as plt
 
-	CTF = CTFSimulation1D( 5.0, int(2000), 200, -1000,
-		#aperture=2.5,
+	CTF = CTFSimulation1D( 5.0, int(2000), 200, -500,
 		delta_current=0.0001,
 		current=5.0,
 		beta=0.1,#mrad
 		delta_E=3.0,
 		delta_voltage=0.0001,
+		aperture=2.5,
 		mode=0)
-	CTF.plot_ctf()
+
+	fig, ax = CTF.plot_ctf()
+	#ax.set_prop_cycle(color=['red', 'green', 'blue'])
+	ax.set_ylim([0,None])
+
+	CTF.show_all()
+
 	CTF.print_aberrations()
 	return
 
@@ -49,19 +55,24 @@ def _test_2D_sim():
 	from pyCTF.simulation import CTFSimulation2D
 	image_size = int(256) # Side length of image in pixels.
 	acc_voltage = 200 # Accelerating voltage in kV.
-	max_frequency = 5 # Maximum spatial frequency in nm-1.
+	max_frequency = 6 # Maximum spatial frequency in nm-1.
 	defocus = -300 # Defocus in nm.
 
 	CTF2D = CTFSimulation2D( max_frequency,
 	                         image_size,
 	                         acc_voltage,
 	                         defocus,
-	                         C12a = 75,
-	                         C12b = 10,
-	                         phi = np.deg2rad(110) )
+	                         aperture=3.0,
+	                         C12a = 400,
+	                         C12b = 0,
+	                         phi = np.deg2rad(45),
+	                         mode=0 )
+	CTF2D.defocus=1000e-9
+	CTF2D.update()
 	CTF2D.plot_ctf()
+	CTF2D.show_all()
 	CTF2D.print_aberrations()
-
+	print(CTF2D.scale)
 	return
 
 
@@ -83,11 +94,11 @@ def _test_defocus( filepath ):
 	from pyCTF.image import measure_defocus
 	from pyCTF.image import print_Cs_results
 	measure_defocus( CTF,
-	                 polynomial=15,# Polynomial for Savitsky-Golay smoothing.
-	                     window=3,# Window size for Savitsky-Golay smoothing.
-	                     f_limits=[0.75,3.0],# Range of freqeuncy to fit.
+	                 polynomial=20,# Polynomial for Savitsky-Golay smoothing.
+	                 window=3,# Window size for Savitsky-Golay smoothing.
+	                 f_limits=[0.1,3.0],# Range of freqeuncy to fit.
 	                     underfocus=True,# False for overfocus.
-	                     xlim=[0.4,3.0],# Exclude all minima outside this range.
+	                     xlim=[0.75,3.0],# Exclude all minima outside this range.
 	                     start=2 )# First index for fitting.
 	print_Cs_results( CTF, verbose=True )
 
@@ -103,9 +114,12 @@ def _test_background_subtraction( filepath ):
 	CTF = pyCTF.image.import_ctf( np.array( Image.open( filepath )), 
 												200, 
 												0.0066127 )
+
 	CTF.remove_background( 8, 4 )
 
 	show_image( CTF.image, scale=CTF.scale )
+	CTF.plot_background()
+
 	return
 
 # Testing astig functions.
@@ -229,21 +243,43 @@ def _test_custom( filepath ):
 
 	FFT = pyCTF.utils.bin_array( image, bf, bf)
 	show_image( FFT, scale=0, length=2 )
+	return
+
+def _test_profiles( filepath ):
+	print('Testing line profiles.')
+
+	from pyCTF.image import ElectronImage
+	from pyCTF.utils import show_image
+	from pyCTF.utils import normalise_data_range
+
 	
+	CTF = pyCTF.image.import_ctf( np.array( Image.open( filepath )), 
+												200, 
+												0.0066127 )
+	CTF.get_profiles(f_limits=[0, 3.0])
+
+	CTF.plot_profiles()
+	
+	plt.show()
 	return
 
 # Script starts here.
 print('Starting tests.')
 
+path = 'C:\\Users\\pczbw2\\Desktop\\git\\pyCTF\\assets\\'
+
 #_test_1D_sim()
 #_test_2D_sim()
-#_test_defocus( 'assets\\example_CTF.tif' )
-#_test_background_subtraction( 'assets\\example_CTF.tif' )
+_test_defocus( path + 'example_CTF.tif' )
+#_test_profiles( path + 'example_CTF.tif' )
+#_test_background_subtraction( path+'example_CTF.tif' )
 #_test_astig( 'assets\\example_astigmatism.tif' )
 #_test_chromatic()
-#_test_other( 'assets\\example_CTF.tif' )
+#_test_other( path+'example_CTF.tif' )
 #_test_fourier('assets\\example_image.tif')
 #_test_TFS( 'assets\\example_TFS.tif' )
-_test_custom( 'C:\\Users\\pczbw2\\Desktop\\git\\pyCTF\\assets\\test_img.tif' )
+#_test_custom( 'C:\\Users\\pczbw2\\Desktop\\git\\pyCTF\\assets\\test_img.tif' )
 
 print('Tests finished.')
+
+plt.show()

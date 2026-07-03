@@ -6,3 +6,4 @@ pyCTF/src/pyCTF.egg-info/
 scripts/*.dm4
 src/pyCTF/__pycache__/
 /src/pyCTF/__pycache__
+*.pyc
