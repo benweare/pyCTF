@@ -85,13 +85,13 @@ class chromaticAberration:
         '''
         method = kwargs.get( 'method', 'numpy' )
         if ( method == 'numpy' ):
-            self.__fit_simple()
+            self._fit_simple()
         if ( method == 'lmfit' ):
-            self.__fit_lmfit()
+            self._fit_lmfit()
         return
 
     # First order polynomial fitting  using numpy.
-    def __fit_simple( self ):
+    def _fit_simple( self ):
         from numpy.polynomial import polynomial as P
         # gradient and intercept 
         [self.intercept, self.slope] = P.polyfit( (self.voltage_series/self.kV),
@@ -105,7 +105,7 @@ class chromaticAberration:
 
 
     # First order polynomial fitting using lmfit.
-    def __fit_lmfit( self, **kwargs ):
+    def _fit_lmfit( self, **kwargs ):
         from lmfit import Model as mdl
         model = mdl( gradient_simple )
         params = model.make_params( )
@@ -126,20 +126,20 @@ class chromaticAberration:
         '''
         method = kwargs.get( 'method', 'numpy' )
         if ( method == 'numpy' ):
-            self.__print_simple()
+            self._print_simple()
         if ( method == 'lmfit' ):
-            self.__print_lmfit()
+            self._print_lmfit()
         return
 
 
     # print results of simple fitting
-    def __print_simple( self ):
+    def _print_simple( self ):
         print( "Cc (mm): " + str( self.slope * 1e3 ) )
         return
 
 
     # print results of lmfit fitting
-    def __print_lmfit( self ):
+    def _print_lmfit( self ):
         print( self.results.fit_report( show_correl=False ) )
         print( 'Cc (mm): ' + str( self.results.params['m'].value * 1e3 ) + ' mm' )
         return
@@ -157,49 +157,51 @@ class chromaticAberration:
         '''
         method = kwargs.get( 'method', 'numpy' )
         if ( method == 'numpy' ):
-            self.__figure_simple()
+            fig, ax = self._figure_simple()
         if ( method == 'lmfit' ):
-            self.__figure_lmfit()
-        return
+            fig, ax = self._figure_lmfit()
+        return fig, ax
 
 
     # Plot results of polyfit fitting.
-    def __figure_simple( self ):
+    def _figure_simple( self ):
         '''
         Plot results of polynomial fitting.
         '''
         fig, ax = plt.subplots( )
-        self.__plot_data( fig, ax )
+        self._plot_data( fig, ax )
         ax.plot( (self.voltage_series/self.kV), 
                   gradient_simple( 
                     (self.voltage_series/self.kV),self.slope, self.intercept), 
                   color='red' )
-        self.__plot_labels( fig, ax )
-        return
+        self._plot_labels( fig, ax )
+        return fig, ax
 
 
     # Plot results of lmfit method.
-    def __figure_lmfit( self ):
+    def _figure_lmfit( self ):
         '''
         Plot results of lmfit fitting.
         '''
         fig, ax = plt.subplots( )
-        self.__plot_data( fig, ax )
+        self._plot_data( fig, ax )
         ax.plot( (self.voltage_series/self.kV), self.results.best_fit,
             label='best fit', color='orange' )
-        self.__plot_labels( fig, ax )
-        return
+        self._plot_labels( fig, ax )
+        return fig, ax
 
 
     # Scatter plot of x and y data.
-    def __plot_data( self, fig, ax ):
+    def _plot_data( self, fig, ax ):
         ax.plot( (self.voltage_series/self.kV), self.focus_series, "x" )
         return
 
 
     # Add labels to figure.
-    def __plot_labels( self, fig, ax ):
+    def _plot_labels( self, fig, ax ):
         ax.set_ylabel( "Defocus / m" )
         ax.set_xlabel( "V/V$_0$" )
+        ytickslabels = ax.get_yticks()
+        ax.set_yticks(ax.get_yticks(), ytickslabels*1e9)
         ax.grid( )
         return

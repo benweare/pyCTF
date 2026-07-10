@@ -17,11 +17,11 @@ from PIL import Image
 import pyCTF
 
 
-from numba import jit, config
-if config.DISABLE_JIT == True:
-	print('Numba JIT disabled.')
-else:
-	print('Numba JIT enabled.')
+#from numba import jit, config
+#if config.DISABLE_JIT == True:
+#	print('Numba JIT disabled.')
+#else:
+#	print('Numba JIT enabled.')
 
 # Test 1D simulations
 def _test_1D_sim():
@@ -119,7 +119,6 @@ def _test_background_subtraction( filepath ):
 
 	show_image( CTF.image, scale=CTF.scale )
 	CTF.plot_background()
-
 	return
 
 # Testing astig functions.
@@ -158,7 +157,7 @@ def _test_chromatic():
 	                          defocus_data)# Series of defocuses, in m.
 	fit_method = 'lmfit'
 	Cc.fit( method=fit_method )
-	Cc.plot_figure( method=fit_method )
+	fig, ax = Cc.plot_figure( method=fit_method )
 	Cc.print_results( method=fit_method )
 	return
 
@@ -256,11 +255,29 @@ def _test_profiles( filepath ):
 	CTF = pyCTF.image.import_ctf( np.array( Image.open( filepath )), 
 												200, 
 												0.0066127 )
+	CTF.image = normalise_data_range(CTF.image)
+	CTF.image = pyCTF.utils._mask_dc_frequency( CTF.image, 0.4, 3)
 	CTF.get_profiles(f_limits=[0, 3.0])
 
-	CTF.plot_profiles()
-	
+	#CTF.plot_profiles()
+	fig, ax = plt.subplots(1)
+	ax.plot( CTF.frequency, CTF.radial_profile )
+	ax.set_box_aspect(1)
+	ax.set_ylabel('Intensity / a.u.', fontsize = 16)
+	ax.set_xlabel('Frequency / $nm^{-1}$', fontsize = 16)
+	ax.set_xlabel('Frequency / $nm^{-1}$', fontsize = 16)
+	ax.set_xticks([])
+	ax.legend()
 	plt.show()
+	return
+
+def _test_show_image( filepath ):
+	from pyCTF.image import ElectronImage
+	from pyCTF.utils import show_image
+	CTF = pyCTF.image.import_ctf( np.array( Image.open( filepath )), 
+												200, 
+												0.0066127 )
+	show_image( CTF.image, scale=CTF.scale, units='nm', cmap='Greys' )
 	return
 
 # Script starts here.
@@ -270,11 +287,12 @@ path = 'C:\\Users\\pczbw2\\Desktop\\git\\pyCTF\\assets\\'
 
 #_test_1D_sim()
 #_test_2D_sim()
-_test_defocus( path + 'example_CTF.tif' )
+#_test_show_image( path+'example_image.tif' )
+#_test_defocus( path + 'example_CTF.tif' )
 #_test_profiles( path + 'example_CTF.tif' )
 #_test_background_subtraction( path+'example_CTF.tif' )
 #_test_astig( 'assets\\example_astigmatism.tif' )
-#_test_chromatic()
+_test_chromatic()
 #_test_other( path+'example_CTF.tif' )
 #_test_fourier('assets\\example_image.tif')
 #_test_TFS( 'assets\\example_TFS.tif' )

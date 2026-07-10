@@ -26,7 +26,12 @@ def scherzer_defocus( input ):
 #    lichte = (-3/4) * Cs * (R * lamb**2)
 #    return lichte
 
-
+# Function to mask the DC frequency in a Fourier transform.
+def _mask_dc_frequency( image, mask=0, val=0 ):
+    centX = int(image.shape[0]/2)
+    centY = int(image.shape[1]/2)
+    image[centX-val:centX+val, centY-val:centY+val] = mask
+    return image
 
 def kv_to_lamb( kV ):
     """
@@ -200,6 +205,7 @@ def show_image( image, cmap='cividis', **kwargs ):
         val = kwargs.get( 'length', 0.5 )
         cbar = kwargs.get('cbar', True)
         norm = kwargs.get('norm', True)
+        units = kwargs.get('units', 'nm$^{-1}$')
         fig, ax = plt.subplots()
         if norm == True:
             cax = ax.matshow( normalise_data_range(image), cmap=cmap )
@@ -210,7 +216,7 @@ def show_image( image, cmap='cividis', **kwargs ):
         if ( scale != 0 ):
             try:
                 from pyCTF.utils import make_scalebar
-                scalebar = make_scalebar( val, scale, ax )
+                scalebar = make_scalebar( val, scale, ax, units )
                 ax.add_artist(scalebar)
             except:
                 print('Error: could not add scalebar to image.')
@@ -223,7 +229,7 @@ def show_image( image, cmap='cividis', **kwargs ):
         return
 
 
-def make_scalebar( val, scale, ax ):
+def make_scalebar( val, scale, ax, units='nm$^{-1}$' ):
     '''
     Make a scalebar.
 
@@ -246,7 +252,7 @@ def make_scalebar( val, scale, ax ):
 
     '''
     from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
-    sizelabel=str( val ) + ' nm$^{-1}$'
+    sizelabel=str( val ) + ' ' + units
     scalebar = AnchoredSizeBar(ax.transData,
                             (val/scale), sizelabel, 'lower left', 
                             pad=0.1,
