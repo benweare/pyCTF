@@ -622,7 +622,7 @@ class Fourier:
         return FT
 
 
-    def measure_arcs( image, width ):
+    def measure_arcs( image, sig=1.0 ):
         '''
         Measure the arcs in the 3D Fourier transform.
 
@@ -630,7 +630,8 @@ class Fourier:
         ----------
         image : array
             Numpy array.
-        width : float
+        sig : float
+            Standard deviation for Gaussian filter.
 
         Returns
         -------
@@ -641,19 +642,17 @@ class Fourier:
         -----
         See literature for background.
         '''
-        # crop to half size
         end = int((np.size(image,0)/2))
         middle = int( np.size(image,1)/2 )
-        filtered = image[ 0:end, :]
         # gaussian blur
         from skimage.filters import gaussian
-        filtered = skimage.filters.gaussian( filtered, sigma=1.0 )
+        filtered = skimage.filters.gaussian( image, sigma=sig )
+        #filtered[:, middle-3:middle+3] =0
         output = np.zeros( (np.size(filtered[:, 1]), 3) )
         # left arc
-        output[:, 0] = np.argmax( filtered[:, 0:(middle - width) ], axis=1 )
+        output[:, 0] = np.argmax( filtered[:, 0:middle ], axis=1 )
         # right arc
-        output[:, 1] = np.argmax( filtered[:, (middle + width): ], axis=1 ) 
-        + middle
+        output[:, 1] = np.argmax( filtered[:, middle: ], axis=1 ) + middle
         output[:, 2] = range(np.size(filtered[:, 1]))
         return output, filtered
 
@@ -674,15 +673,15 @@ class Fourier:
         '''
         # Can see where arc is not detected when differece spikes down.
         fig, axs = plt.subplots(1, 2, figsize=(8, 8))
-        axs[0].matshow( image )
+        axs[0].imshow( image )
         axs[0].plot( output[:, 0], output[:, 2], 'x', color='red' )
         axs[0].plot( output[:, 1], output[:, 2], 'x', color='orange' )
         
         output[:, 0] = normalise_data_range( output[:, 0] )
         output[:, 1] = normalise_data_range( output[:, 1] )
     
-        axs[1].hlines(1, 0, 100, color='k', linestyle='--', alpha=0.7 )
-        axs[1].hlines(0, 0, 100, color='k', linestyle='--', alpha=0.7 )
+        axs[1].axhline(1, 0, 100, color='k', linestyle='--', alpha=0.7 )
+        axs[1].axhline(0, 0, 100, color='k', linestyle='--', alpha=0.7 )
         axs[1].plot( np.diff( output[:, 0] )
             +1.0, alpha=1.0, 
             label='left', color='red' )
@@ -699,5 +698,4 @@ class Fourier:
     
         axs[0].set_title( 'arcs' )
         axs[1].set_title( 'difference' )
-        #fig.savefig( '80kV_arcs.png', dpi='figure', format='png' )
-        return
+        return fig, axs

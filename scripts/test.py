@@ -292,11 +292,41 @@ path = 'C:\\Users\\pczbw2\\Desktop\\git\\pyCTF\\assets\\'
 #_test_profiles( path + 'example_CTF.tif' )
 #_test_background_subtraction( path+'example_CTF.tif' )
 #_test_astig( 'assets\\example_astigmatism.tif' )
-_test_chromatic()
+#_test_chromatic()
 #_test_other( path+'example_CTF.tif' )
 #_test_fourier('assets\\example_image.tif')
 #_test_TFS( 'assets\\example_TFS.tif' )
 #_test_custom( 'C:\\Users\\pczbw2\\Desktop\\git\\pyCTF\\assets\\test_img.tif' )
+
+from pyCTF.figures import zernike_polynomials
+
+zernike = zernike_polynomials()
+
+size = 1024
+
+arr = np.ones([size, size])
+
+from pyCTF.utils import find_iradius_itheta
+
+iradius, itheta = find_iradius_itheta( arr, 1 )
+
+from pyCTF.image import ElectronImage
+from pyCTF.utils import show_image
+from pyCTF.utils import normalise_data_range
+
+	
+CTF = pyCTF.image.import_ctf( np.array( Image.open( path + 'example_CTF.tif'  )), 
+												200, 
+												0.0066127 )
+CTF.C12 = 50e-9
+CTF.defocus = 1000e-9
+CTF.Cs = 1.0e-3
+
+#polynomials = zernike._phase_plate( CTF, CTF.image.shape[0]/2, CTF.iradius, CTF.itheta )
+polynomials = zernike._phase_plate( arr, arr.shape[0]/2, iradius, itheta )
+
+#fig, ax = zernike._plot_phase_plate( polynomials, 0.01 )
+fig, ax = zernike._plot_all(polynomials)
 
 print('Tests finished.')
 
