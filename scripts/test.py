@@ -280,10 +280,162 @@ def _test_show_image( filepath ):
 	show_image( CTF.image, scale=CTF.scale, units='nm', cmap='Greys' )
 	return
 
+def _test_astig_measure(filepath):
+	from pyCTF.image import ElectronImage
+	from pyCTF.astig import Astig
+	from pyCTF.utils import normalise_data_range
+
+	CTF = pyCTF.image.import_ctf( np.array( Image.open( filepath )), 
+												200, 
+												0.0066127*2)
+	CTF.remove_background( 15, 10 )
+
+	#from pyCTF.astig import astig_angle
+	#astig_angle( CTF )
+	#Astig.plot_angles( CTF )
+	#print( CTF.amax )
+
+	#from pyCTF.utils import show_image
+	#show_image(CTF.image)
+
+	from pyCTF.simulation import CTFSimulation2D
+	image_size = CTF.image.shape[0] # Side length of image in pixels.
+	#CTF.image[int(CTF.image.shape[0]/2), int(CTF.image.shape[0]/2)] = 0
+
+	CTF2D = CTFSimulation2D( CTF.image.shape[0]*0.0066127*2,
+	                         image_size,#size
+	                         200,#kv
+	                         -650)# defocus
+	CTF2D.phi = np.deg2rad(40.3)
+	CTF2D.update()
+
+	slices = 15
+
+	vals, a, polar_list = Astig.magnitude_measure( normalise_data_range(CTF.image),
+													slices,
+													100,
+													CTF2D )
+	Astig.plot_results( CTF, vals, slices, a, CTF2D )
+	return
+
+
+def _TFS( filepath):
+	# Function to process the through-focus series into a stack of 2D
+	# Fourier transforms.
+	from pyCTF.fourier import Fourier
+	print('Processing TFS.')
+
+	# Define radii for background subtraction.
+	r1 = 4
+	r2 = 4
+
+	print('Importing through-focus series.')
+	stack =  Fourier.import_stack( filepath )
+	print('Performing FFT.')
+	FFT = Fourier.fft_stack( stack )
+	FFT = Fourier.log_mod( FFT )
+	print('Removing background.')
+	FFT = Fourier.remove_bckg_stack( FFT, r1, r2 )
+	print('Radial profile...')
+	prof = Fourier.profile_fft_stack( FFT )
+
+	fig, ax = plt.subplots()
+	ax.imshow(prof)
+
+	np.save('TFS', prof)
+
+	return
+
+def  _test_zer( filepath ):
+	arr = np.load( filepath )
+	arr = np.rot90(arr)
+	arr = arr[:, 1:50]
+
+	import skimage
+	from skimage.filters import gaussian
+	arr = gaussian(arr, sigma=1)
+
+	#from pyCTF.utils import normalise_data_range
+	#arr = normalise_data_range(arr)
+
+	fig, ax = plt.subplots()
+	ax.imshow(arr)
+
+	freq = np.linspace(0, arr.shape[1])
+
+	output = np.zeros([arr.shape[0], 8])
+
+	from pyCTF.zeros import Zeros
+
+	for n in range(arr.shape[0]):
+		minima, _ = Zeros.calc_zeros( arr[n, :] )
+		minima = Zeros.filter_zeros(minima, arr[n, :], freq, [10,40], [None,0.4] )
+		for m in range(minima.shape[0]):
+			output[n, m] = minima[m]
+
+		try:
+			ax.plot(freq[:][minima[0]], arr[n,:][minima[0]]+n, 'x', color='k')
+			ax.plot(freq[:][minima[1]], arr[n,:][minima[1]]+n, 'x', color='y')
+			ax.plot(freq[:][minima[2]], arr[n,:][minima[2]]+n, 'x', color='m')
+			ax.plot(freq[:][minima[3]], arr[n,:][minima[3]]+n, 'x', color='c')
+		except:
+			pass
+
+	fig, ax = plt.subplots()
+	ax.imshow(arr)
+
+	ax.plot( output[:,0], range(0, 200),  'x', color='k')
+	ax.plot( output[:,1], range(0, 200), 'x', color='y')
+	ax.plot( output[:,2], range(0, 200), 'x', color='m')
+	ax.plot( output[:,3], range(0, 200), 'x', color='c')
+
+
+
+	scale = 0.06632
+	ticks = np.array([0,\
+					arr.shape[1]*0.25,\
+					arr.shape[1]*0.5,\
+					arr.shape[1]*0.75,\
+					arr.shape[1]])
+
+	labels = np.array([ str(0),\
+	        str(np.round(arr.shape[1]*0.25*scale,2)),\
+	        str(np.round(arr.shape[1]*0.5*scale,2)),\
+	        str(np.round(arr.shape[1]*0.75*scale,2)),\
+	        str(np.round(arr.shape[1]*scale,2))])
+
+	ax.set_xticks( ticks, labels=labels)
+
+	scale = 6.25
+	ticks = np.array([0,\
+					arr.shape[0]*0.25,\
+					arr.shape[0]*0.5,\
+					arr.shape[0]*0.75,\
+					arr.shape[0]])
+
+	labels = np.array([str(np.round(-arr.shape[0]*0.5*scale,2)),\
+	        str(np.round(-arr.shape[0]*0.25*scale,2)),\
+	        str(0),
+	        str(np.round(arr.shape[0]*0.25*scale,2)),\
+	        str(np.round(arr.shape[0]*0.5*scale,2))])
+
+	ax.set_yticks( ticks, labels=labels)
+
+	# then fit parabola to get equation for measuring defocus.
+
+	return
+
 # Script starts here.
 print('Starting tests.')
 
 path = 'C:\\Users\\pczbw2\\Desktop\\git\\pyCTF\\assets\\'
+
+#_test_astig_measure( path+'example_astigmatism2.tif' )
+
+#_TFS( path+'\\wip\\example_TFS.tif' )
+_test_zer( path+'\\wip\\TFS.npy' )
+
+
 
 #_test_1D_sim()
 #_test_2D_sim()
@@ -297,7 +449,7 @@ path = 'C:\\Users\\pczbw2\\Desktop\\git\\pyCTF\\assets\\'
 #_test_fourier('assets\\example_image.tif')
 #_test_TFS( 'assets\\example_TFS.tif' )
 #_test_custom( 'C:\\Users\\pczbw2\\Desktop\\git\\pyCTF\\assets\\test_img.tif' )
-
+'''
 from pyCTF.figures import zernike_polynomials
 
 zernike = zernike_polynomials()
@@ -327,7 +479,7 @@ polynomials = zernike._phase_plate( arr, arr.shape[0]/2, iradius, itheta )
 
 #fig, ax = zernike._plot_phase_plate( polynomials, 0.01 )
 fig, ax = zernike._plot_all(polynomials)
-
+'''
 print('Tests finished.')
 
 plt.show()

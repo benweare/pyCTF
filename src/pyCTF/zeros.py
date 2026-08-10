@@ -143,12 +143,16 @@ class Zeros:
         '''
         # freq
         #minima = self.filter_range( minima, freq, xlim[0], xlim[1] )
-        minima = np.array([x for x in minima if freq[x] <= xlim[1]])
-        minima = np.array([x for x in minima if freq[x] >= xlim[0]])
+        if xlim[1] != None:
+            minima = np.array([x for x in minima if freq[x] <= xlim[1]])
+        if xlim[0] != None:
+            minima = np.array([x for x in minima if freq[x] >= xlim[0]])
         # prof
         #minima = self.filter_range( minima, prof, ylim[0], ylim[1] )
-        minima = np.array([x for x in minima if prof[x] <= ylim[1]])
-        minima = np.array([x for x in minima if prof[x] >= ylim[0]])
+        if ylim[1] != None:
+            minima = np.array([x for x in minima if prof[x] <= ylim[1]])
+        if ylim[0] != None:
+            minima = np.array([x for x in minima if prof[x] >= ylim[0]])
         return minima
 
 
@@ -352,12 +356,12 @@ class Zeros:
         print('lmfit results')
         print('-------------')
         print( results.fit_report(show_correl=False)+'\n' )
-        print( Zeros.__results_table(CTF, poly, win, xlim, ylim, defocus, Cs, results) )
+        print( Zeros._results_table(CTF, poly, win, xlim, ylim, defocus, Cs, results) )
         return
 
 
     # Make a table of results from fitting parameters.
-    def __results_table( CTF, poly, win, xlim, ylim, defocus, Cs, results ):
+    def _results_table( CTF, poly, win, xlim, ylim, defocus, Cs, results ):
         if ( Cs == None ):
             Cs = 'N/A'
         if ( defocus == None ):

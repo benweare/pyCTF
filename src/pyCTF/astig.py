@@ -247,7 +247,7 @@ class Astig( LineProfiles ):
 
     #@jit
     ### methods to find astigmatism magnitude with cross-correlation
-    def __make_data( slices, a, b, simCTF, radius ):
+    def _make_data( slices, a, b, simCTF, radius ):
         '''
         Simulate CTFs with a range of twofold astigmatism.
 
@@ -298,7 +298,7 @@ class Astig( LineProfiles ):
 
     #@jit
     # See CTFFIND4 paper for method used here.
-    def __magnitude_correlate( warped, polar ):
+    def _magnitude_correlate( warped, polar ):
         '''
         Pearson's correlation coeffcient to determine astigmatism magnitude. 
 
@@ -373,19 +373,19 @@ class Astig( LineProfiles ):
         warped = warped[:90, :]
         # change logic so don't have to evaluate if statement every time? 
         for n in range( slices ):#range(np.size(a, 0))
-            polar = Astig.__make_data( slices, a[n], b, CTF2D, radius )
+            polar = Astig._make_data( slices, a[n], b, CTF2D, radius )
             polar = polar[:, :90, :]
             if ( n==0 ):
                 polar_list.insert( 0, polar )
             else:
                 polar_list.append( polar )
-            vals[n, :] = Astig.__magnitude_correlate( warped, polar )
+            vals[n, :] = Astig._magnitude_correlate( warped, polar )
         return vals, a, polar_list
 
 
     #@jit
     # Other methods.
-    def __find_astig_defocus( vals, a ):
+    def _find_astig_defocus( vals, a ):
         '''
         Returns the magnitude of astigmatism.
 
@@ -407,9 +407,9 @@ class Astig( LineProfiles ):
     
 
     # Under development, see CTFFIND4 paper for method of scoring.
-    def __apply_limit( vals, limits ):
-        vals_adjusted = vals - ((a[x] - a[y])**2 / (2*( limits**2)*256))
-        return vals_adjusted
+    #def _apply_limit( vals, limits ):
+    #    vals_adjusted = vals - ((a[x] - a[y])**2 / (2*( limits**2)*256))
+    #    return vals_adjusted
 
 
     # Plotting functions.
@@ -451,11 +451,11 @@ class Astig( LineProfiles ):
         scalebar = make_scalebar( 1, ElectronImage.scale, axs[1] )
         axs[1].add_artist(scalebar)
         #draw lines on image
-        x1, y1, x2, y2 = self.calc_angles( )
-        axs[1].axline(( ElectronImage.centX, ElectronImage.centY), (x1, y1), color='red')
-        axs[1].axline(( ElectronImage.centX, ElectronImage.centY), (x2, y2), color='orange')
-        axs[1].set_xlim([0, ElectronImage.width])
-        axs[1].set_ylim([ElectronImage.length, 0])
+        #x1, y1, x2, y2 = Astig.calc_angles( )
+        #axs[1].axline(( ElectronImage.centX, ElectronImage.centY), (x1, y1), color='red')
+        #axs[1].axline(( ElectronImage.centX, ElectronImage.centY), (x2, y2), color='orange')
+        #axs[1].set_xlim([0, ElectronImage.width])
+        #axs[1].set_ylim([ElectronImage.length, 0])
         return
 
 
