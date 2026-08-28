@@ -4,6 +4,7 @@ Classes for simulating contrast transfer functions.
 This module contains classes for simulating 2D and 1D CTFs.
 '''
 
+
 import numpy as np 
 import matplotlib.pyplot as plt
 

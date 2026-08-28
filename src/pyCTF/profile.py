@@ -2,21 +2,35 @@
 Module for handling line profiles.
 '''
 
+
 import numpy as np
-
-#from numba import jit, config
-
-#from pyCTF.__init__ import enable_jit
-#if enable_jit == True:
-#    config.DISABLE_JIT = True
-#else:
-#    config.DISABLE_JIT = False
 
 import scipy
 from scipy.signal import savgol_filter
 from scipy.signal import find_peaks
 
 from pyCTF.utils import baseline_als
+
+
+def plot_radial_profile( prof, freq, units='nm$^{-1]$' ):
+    '''
+    Matplotlib plot of profile.
+
+    Parameters
+    ----------
+    prof : array
+        y-axis data.
+    freq : array
+        x-axis data.
+    '''
+    fig, ax = plt.subplots(1, 1)
+    ax.set_box_aspect(1)
+    ax.set_title("Radial profile")
+    ax.set_ylabel('Intensity', fontsize = 16)
+    ax.set_xlabel(('Frequency / '+units), fontsize = 16)
+    ax.plot( freq, prof, label='profile' )
+    return
+
 
 class Profile:
     '''
@@ -37,8 +51,6 @@ class Profile:
         Measure and subtract baseline from profile.
     smooth_profile()
         Savitsky-Golay smoothing.
-    plot_radial_profile()
-        Plot with matplotlib.
 
     Notes
     -----
@@ -50,7 +62,6 @@ class Profile:
         return
 
 
-    #@jit#(debug=True)
     def radial_profile( data, centX, centY ):
         '''
         Create radial profile of 2D array.
@@ -89,7 +100,6 @@ class Profile:
         return radialprofile, bins
 
 
-    #@jit
     def crop_frequency( data, freq, f_limits ):
         '''
         Crop profile to a range.
@@ -188,23 +198,3 @@ class Profile:
                                 deriv=0,
                                 mode='interp')
         return smoothed
-    
-
-    def plot_radial_profile( prof, freq ):
-        '''
-        Matplotlib plot of profile.
-
-        Parameters
-        ----------
-        prof : array
-            y-axis data.
-        freq : array
-            x-axis data.
-        '''
-        fig, ax = plt.subplots(1, 1)
-        ax.set_box_aspect(1)
-        ax.set_title("Radial profile")
-        ax.set_ylabel('Intensity', fontsize = 16)
-        ax.set_xlabel('Frequency / nm-1', fontsize = 16)
-        ax.plot( freq, prof, label='profile' )
-        return

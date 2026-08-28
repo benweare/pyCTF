@@ -15,6 +15,41 @@ from pyCTF.utils import normalise_data_range
 from pyCTF.profile import Profile
 
 
+# add kwargs for variable in last two methods
+def process_CTF( image, **kwargs ):
+    '''
+    Process a single image to get the CTF.
+
+    Parameters
+    ----------
+    image : array
+    width : int, optional
+        Number of pixels to crop image to.
+    rs1 : int, optional
+    rs2 : int, optional
+
+    Returns
+    -------
+    FT : array
+
+    Notes
+    -----
+    Wrapper around various functions in Foruier class, for method details 
+    see: imFFT(), log_mod(), crop(), remove_bckg(). 
+
+    Processes an image to get the CTF, using default values that may work
+    well for some datasets. 
+    '''
+    width = kwargs.get( 'width', 300 )
+    rs1 = kwargs.get( 'rs1', 20 )
+    rs2 = kwargs.get( 'rs2', 20 )
+    FT = Fourier.imfft( image )
+    FT = Fourier.log_mod( FT )
+    FT = Fourier.crop( FT, width )
+    FT, _, _ = Fourier.remove_bckg( FT, rs1, rs2 )
+    return FT
+
+
 class Fourier:
     '''
     Methods for performing Fourier-space operations on arrays.
@@ -44,20 +79,20 @@ class Fourier:
     Notes
     -----
     Class containing method for performing Fourier-space operations on arrays,
-    using numpy.fft class. Contains wrappers for basic operations such as
-    performing a FFT and moving 0-frequency terms to center of output array,
-    and more complex functions for CTF data processing such as Fourer-space
-    background removal.
+     using numpy.fft class. Contains wrappers for basic operations such as
+     performing a FFT and moving 0-frequency terms to center of output array,
+     and more complex functions for CTF data processing such as Fourer-space
+     background removal.
 
 
     3D arrays are referred to as "stacks", with constituent 2D arrays referred
-    to as "slices", following image processing nomenclature. Stacks use the
-    following coordinate convention: [[x:, y:], z], where for each integer
-    value of z is associated with a slice [x:, y:] that corresponds to an
-    image.
+     to as "slices", following image processing nomenclature. Stacks use the
+     following coordinate convention: [[x:, y:], z], where for each integer
+     value of z is associated with a slice [x:, y:] that corresponds to an
+     image.
 
     The terms DC (direct-current), zeroth order, and 0-order frequency may be
-    used interchangably in this class's documentation, sorry in advance. 
+     used interchangably in this class's documentation, sorry in advance. 
     '''
     def __init__( self ):
         from numpy.fft import fft2
@@ -293,23 +328,6 @@ class Fourier:
         output = np.fft.fftshift( output )
         #output = np.fft.fftshift( output, axes=(0, 2) )
         return output
-
-
-    # plot views of three axes of 3D FFT
-    # unfinished
-    def plot_3d_fft( data, cmap='cividis' ):
-        '''
-        Plot 3D FFT.
-
-        Notes
-        -----
-        Unfinished. 
-        '''
-        fig, axs = plt.subplots(1,3)
-        axs[0].imshow(np.sum( arr[:,:,:], 0 ), cmap=cmap)
-        axs[1].imshow(np.sum( arr[:,:,:], 1 ), cmap=cmap)
-        axs[2].imshow(np.sum( arr[:,:,:], 2 ), cmap=cmap)
-        return fig, ax
 
 
     def crop( image, width, **kwargs ):
@@ -585,41 +603,6 @@ class Fourier:
         # rearrange to convention defined above
         stack = np.moveaxis( stack, 0, 2 )
         return stack
-
-
-    # add kwargs for variable in last two methods
-    def process_CTF( image, **kwargs ):
-        '''
-        Process a single image to get the CTF.
-
-        Parameters
-        ----------
-        image : array
-        width : int, optional
-            Number of pixels to crop image to.
-        rs1 : int, optional
-        rs2 : int, optional
-
-        Returns
-        -------
-        FT : array
-
-        Notes
-        -----
-        Wrapper around various functions in Foruier class, for method details 
-        see: imFFT(), log_mod(), crop(), remove_bckg(). 
-
-        Processes an image to get the CTF, using default values that may work
-        well for some datasets. 
-        '''
-        width = kwargs.get( 'width', 300 )
-        rs1 = kwargs.get( 'rs1', 20 )
-        rs2 = kwargs.get( 'rs2', 20 )
-        FT = Fourier.imfft( image )
-        FT = Fourier.log_mod( FT )
-        FT = Fourier.crop( FT, width )
-        FT, _, _ = Fourier.remove_bckg( FT, rs1, rs2 )
-        return FT
 
 
     def measure_arcs( image, sig=1.0 ):

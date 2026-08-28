@@ -9,14 +9,14 @@ import numpy as np
 
 def save_CTF_profile_to_file( CTF, **kwargs ):
     extension = kwargs.get('extension', '.msa')
-    output = __create_msa_from_array( CTF.smoothed_profile, 
+    output = _create_msa_from_array( CTF.smoothed_profile, 
         CTF.cropped_frequency, 
         scale=CTF.scale )
-    __save_to_file( output, extension, 'file' )
+    _save_to_file( output, extension, 'file' )
     return
 
 
-def __save_to_file( data, extension, filename ):
+def _save_to_file( data, extension, filename ):
     name = filename + extension
     with open(name, "x", encoding="utf-8") as f:
         f.write(data)
@@ -24,12 +24,12 @@ def __save_to_file( data, extension, filename ):
 
 
 # Function to create csv file from xy file.
-def __xy_to_csv( xy ):
+def _xy_to_csv( xy ):
     rows = ["{}, {}".format(i, j) for i, j in xy]
     text = "\n".join(rows)
     return text
 
-def __create_xy_from_array( x, y ):
+def _create_xy_from_array( x, y ):
     output = np.stack( (x, y), axis=0)
     output = np.transpose( output )
     output = np.round(output, 3)
@@ -37,7 +37,10 @@ def __create_xy_from_array( x, y ):
 
 
 # Functions for msa files.
-def __create_msa_header( npoints, xunits, xperchannel ):
+def _create_msa_header( npoints,
+                        xunits,
+                        xperchannel,
+                        offset ):
     header = ''\
     '#FORMAT         : EMSA/MAS Spectral Data File'+'\n'\
     '#VERSION     : 1.0'+'\n'\
@@ -51,29 +54,29 @@ def __create_msa_header( npoints, xunits, xperchannel ):
     '#YUNITS      : '+'\n'\
     '#DATATYPE    : XY'+'\n'\
     '#XPERCHAN    : '+ xperchannel +'\n'\
-    '#OFFSET      : -0.000000e+00'+'\n'\
+    '#OFFSET      : '+ offset +'\n'\
     '#SPECTRUM    : Spectral Data Starts Here\n'
     return header
 
 
-def __create_msa_footer():
+def _create_msa_footer():
     footer = '\n#ENDOFDATA   : End Of Data and File'
     return footer
 
 
-def __assemble_msa( header, footer, xy ):
+def _assemble_msa( header, footer, xy ):
     output = header + xy + footer
     return output
 
 
-def __create_msa_from_array( xdata, ydata, **kwargs ):
+def _create_msa_from_array( xdata, ydata, **kwargs ):
     xunits = kwargs.get('xunits', '1/nm')
     scale = kwargs.get('scale', 1.0)
     npoints = str(np.size( xdata ))
     xperchannel = str( np.round( abs(xdata[1]-xdata[0]), 3) )
-    header = __create_msa_header( npoints, xunits, xperchannel )
-    footer = __create_msa_footer()
-    xy = __create_xy_from_array( xdata, ydata )
-    xy = __xy_to_csv( xy )
-    output = __assemble_csv( header, footer, xy )
+    header = _create_msa_header( npoints, xunits, xperchannel )
+    footer = _create_msa_footer()
+    xy = _create_xy_from_array( xdata, ydata )
+    xy = _xy_to_csv( xy )
+    output = _assemble_csv( header, footer, xy )
     return output

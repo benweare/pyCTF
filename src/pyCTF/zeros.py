@@ -2,12 +2,6 @@
 A class to measure CTF zeros with contained methods.
 '''
 
-#from numba import jit, config
-
-#if enable_jit == True:
-#    config.DISABLE_JIT = True
-#else:
-#    config.DISABLE_JIT = False
 
 import numpy as np 
 import scipy
@@ -308,7 +302,15 @@ class Zeros:
     
 
     # clean up xraw and yraw
-    def plot_figure( x, y, minima, x_min, y_min, results, xraw, yraw, indi_min ):
+    def plot_figure( x,
+                    y,
+                    minima,
+                    x_min,
+                    y_min,
+                    results,
+                    xraw,
+                    yraw,
+                    indi_min ):
         '''
         Plot figure for spherical aberration fiting.
 

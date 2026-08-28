@@ -79,6 +79,7 @@ class chromaticAberration:
         self.slope = None
         return
 
+
     def fit( self, **kwargs ):
         '''
         Fit data. 
@@ -89,6 +90,7 @@ class chromaticAberration:
         if ( method == 'lmfit' ):
             self._fit_lmfit()
         return
+
 
     # First order polynomial fitting  using numpy.
     def _fit_simple( self ):

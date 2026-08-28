@@ -358,8 +358,8 @@ def  _test_zer( filepath ):
 	#from pyCTF.utils import normalise_data_range
 	#arr = normalise_data_range(arr)
 
-	fig, ax = plt.subplots()
-	ax.imshow(arr)
+	#fig, ax = plt.subplots()
+	#ax.imshow(arr)
 
 	freq = np.linspace(0, arr.shape[1])
 
@@ -373,21 +373,27 @@ def  _test_zer( filepath ):
 		for m in range(minima.shape[0]):
 			output[n, m] = minima[m]
 
+	output[output == 0] = np.nan
+	'''
 		try:
-			ax.plot(freq[:][minima[0]], arr[n,:][minima[0]]+n, 'x', color='k')
-			ax.plot(freq[:][minima[1]], arr[n,:][minima[1]]+n, 'x', color='y')
-			ax.plot(freq[:][minima[2]], arr[n,:][minima[2]]+n, 'x', color='m')
-			ax.plot(freq[:][minima[3]], arr[n,:][minima[3]]+n, 'x', color='c')
+			ax.plot(freq[:][minima[0]], arr[n,:][minima[0]]+n, 'x', color='k', label='n=|1|')
+			ax.plot(freq[:][minima[1]], arr[n,:][minima[1]]+n, 'x', color='y', label='n=|2|')
+			ax.plot(freq[:][minima[2]], arr[n,:][minima[2]]+n, 'x', color='m', label='n=|3|')
+			ax.plot(freq[:][minima[3]], arr[n,:][minima[3]]+n, 'x', color='c', label='n=|4|')
 		except:
 			pass
-
+	#ax.legend()
+	'''
+	
 	fig, ax = plt.subplots()
 	ax.imshow(arr)
 
-	ax.plot( output[:,0], range(0, 200),  'x', color='k')
-	ax.plot( output[:,1], range(0, 200), 'x', color='y')
-	ax.plot( output[:,2], range(0, 200), 'x', color='m')
-	ax.plot( output[:,3], range(0, 200), 'x', color='c')
+	ax.plot( output[:,0], range(0, 200),  'x', color='k', label='n=|1|')
+	ax.plot( output[:,1], range(0, 200), 'x', color='y', label='n=|2|')
+	ax.plot( output[:,2], range(0, 200), 'x', color='m', label='n=|3|')
+	ax.plot( output[:,3], range(0, 200), 'x', color='c', label='n=|4|')
+	ax.legend()
+
 
 
 
@@ -422,6 +428,42 @@ def  _test_zer( filepath ):
 	ax.set_yticks( ticks, labels=labels)
 
 	# then fit parabola to get equation for measuring defocus.
+
+	def hyperbola( x, a, b, c, d ):
+		y = (a/(b*x)) + c
+		return y
+
+	k = 100
+	temp=output[0:k,:]
+
+	ydata = range(-100, 0)
+
+	from scipy.optimize import curve_fit
+	popt, pcov = curve_fit( hyperbola,
+							temp[:,0],
+							ydata,
+							maxfev=5000,
+							nan_policy='omit' )
+
+	fig, ax = plt.subplots()
+	ax.plot( output[:,0], range(-100, 100),  'x', color='k', label='n=|1|')
+	ax.plot(hyperbola(range(0, k), *popt), 'g--', label='best fit' )
+	#ax.plot(range(0, k), (hyperbola(range(0, k), *popt)), 'g--', label='best fit' )
+	#ax.set_xlim([0, 40])
+	#ax.set_ylim([ydata[0], ydata[-1]])
+	
+	
+	#temp=output[k:200,:]
+	#.ydata = range(0, 100)
+
+	popt, pcov = curve_fit( hyperbola,
+							temp[:,0],
+							ydata,
+							maxfev=5000,
+							nan_policy='omit' )
+	ax.plot(ydata, hyperbola(range(k, 200), *popt), 'r--', label='best fit' )
+
+	
 
 	return
 

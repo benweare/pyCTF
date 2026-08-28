@@ -1,6 +1,8 @@
 '''
 A class to contain contrast transfer functions (CTFs).
 '''
+
+
 import numpy as np
 
 import matplotlib.pyplot as plt
@@ -26,6 +28,7 @@ from pyCTF.astig import Astig
 #import misc
 #import twofold_astigmatism
 #import zeros
+
 
 class filterError( Exception ):
     '''
@@ -208,6 +211,7 @@ class ElectronImage:
         return
 
 
+    # Script?
     def get_profiles( self, **kwargs ):
         '''
         Wrapper around _process_profile that is more convienient to use.
@@ -351,6 +355,7 @@ def print_Cs_results( ElectronImage, **kwargs ):
 
 
 # Wrapper to measure defocus.
+# Is this just a script tho?
 def measure_defocus( ElectronImage, **kwargs ):
     '''
     Measure the defocus of a CTF.

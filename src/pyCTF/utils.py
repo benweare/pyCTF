@@ -5,7 +5,6 @@ This module contains miscellanous functions used by other  modules
 in the PyCTF package.
 '''
 
-
 import numpy as np
 from numpy.polynomial import polynomial
 
@@ -21,17 +20,13 @@ def scherzer_defocus( input ):
     return scherzer*1e9
 
 
-# Lichte defocus.
-#def lichte_defocus():
-#    lichte = (-3/4) * Cs * (R * lamb**2)
-#    return lichte
-
 # Function to mask the DC frequency in a Fourier transform.
 def _mask_dc_frequency( image, mask=0, val=0 ):
     centX = int(image.shape[0]/2)
     centY = int(image.shape[1]/2)
     image[centX-val:centX+val, centY-val:centY+val] = mask
     return image
+
 
 def kv_to_lamb( kV ):
     """
